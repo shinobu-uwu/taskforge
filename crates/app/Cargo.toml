@@ -1,5 +1,5 @@
 [package]
-name = "gui"
+name = "app"
 version.workspace = true
 edition.workspace = true
 
@@ -9,7 +9,7 @@ gpui.workspace = true
 gpui-component.workspace = true
 gpui-component-assets.workspace = true
 gpui_platform.workspace = true
-serde.workspace = true
-tokio.workspace = true
+sysinfo.workspace = true
+system = { path = "../system" }
 tracing.workspace = true
 tracing-subscriber.workspace = true

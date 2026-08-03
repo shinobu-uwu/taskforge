@@ -46,7 +46,7 @@
 
         buildInputs =
           runtimeDeps
-          ++ [pkgs.pkg-config]
+          ++ [pkgs.pkg-config pkgs.mold]
           ++ lib.optionals pkgs.stdenv.isDarwin [pkgs.libiconv];
       };
 

@@ -8,13 +8,13 @@ edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1"
+circular-buffer = "2.0.0"
 gpui = { git = "https://github.com/zed-industries/zed", features = ["wayland"] }
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }
-# Optional, for default bundled assets
 gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
 serde = { version = "1", features = ["derive"] }
+sysinfo = "0.39.6"
 thiserror = "2"
-tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 
@@ -24,3 +24,10 @@ features = ["font-kit", "wayland"]
 
 [workspace.metadata.crane]
 name = "taskforge"
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = "fat"
+panic = "abort"
+codegen-units = 1

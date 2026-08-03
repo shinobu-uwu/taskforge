@@ -1,0 +1,9 @@
+[package]
+name = "system"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+circular-buffer.workspace = true
+sysinfo.workspace = true
+thiserror.workspace = true

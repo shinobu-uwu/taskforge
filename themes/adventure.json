@@ -1,0 +1,165 @@
+{
+  "$schema": "https://github.com/longbridge/gpui-component/raw/refs/heads/main/.theme-schema.json",
+  "name": "Dracula",
+  "author": "Dracula Theme",
+  "url": "https://github.com/dracula/dracula-theme",
+  "themes": [
+    {
+      "name": "Dracula",
+      "mode": "dark",
+      "colors": {
+        "accent.background": "#44475A",
+        "accent.foreground": "#F8F8F2",
+        "background": "#282A36",
+        "border": "#44475A",
+        "danger.background": "#FF5555",
+        "foreground": "#F8F8F2",
+        "input.border": "#6272A4",
+        "link.active.foreground": "#8BE9FD",
+        "link.foreground": "#8BE9FD",
+        "link.hover.foreground": "#A4FFFF",
+        "list.active.background": "#BD93F922",
+        "list.active.border": "#BD93F9",
+        "list.even.background": "#2E3140",
+        "muted.background": "#343746",
+        "muted.foreground": "#6272A4",
+        "panel.background": "#21222C",
+        "popover.background": "#282A36",
+        "popover.foreground": "#F8F8F2",
+        "primary.active.background": "#BD93F999",
+        "primary.background": "#BD93F9",
+        "primary.foreground": "#282A36",
+        "primary.hover.background": "#C9A7FF",
+        "scrollbar.background": "#00000000",
+        "scrollbar.thumb.background": "#6272A4",
+        "secondary.background": "#343746",
+        "secondary.active.background": "#44475A",
+        "secondary.foreground": "#F8F8F2",
+        "secondary.hover.background": "#50536A",
+        "tab.active.background": "#282A36",
+        "tab.active.foreground": "#F8F8F2",
+        "tab.background": "#282A3600",
+        "tab.foreground": "#6272A4",
+        "tab_bar.background": "#21222C",
+        "table.background": "#282A36",
+        "table.active.background": "#BD93F911",
+        "table.active.border": "#BD93F9",
+        "table.head.foreground": "#F8F8F2B3",
+        "table.row.border": "#44475A80",
+        "title_bar.background": "#21222C",
+        "title_bar.border": "#44475A",
+        "ring": "#BD93F9",
+        "base.red": "#FF5555",
+        "base.red.light": "#FF6E6E",
+        "base.green": "#50FA7B",
+        "base.green.light": "#69FF94",
+        "base.blue": "#6272A4",
+        "base.blue.light": "#8BE9FD",
+        "base.cyan": "#8BE9FD",
+        "base.cyan.light": "#A4FFFF",
+        "base.magenta": "#FF79C6",
+        "base.magenta.light": "#FF92DF",
+        "base.yellow": "#F1FA8C",
+        "base.yellow.light": "#FFFFA5"
+      },
+      "highlight": {
+        "editor.foreground": "#F8F8F2",
+        "editor.background": "#282A36",
+        "editor.active_line.background": "#44475A",
+        "editor.line_number": "#6272A4",
+        "editor.active_line_number": "#F8F8F2",
+        "editor.invisible": "#6272A466",
+        "conflict": "#FFB86C",
+        "created": "#50FA7B",
+        "deleted": "#FF5555",
+        "error": "#FF5555",
+        "hidden": "#6272A4",
+        "hint": "#8BE9FD",
+        "ignored": "#6272A4",
+        "info": "#8BE9FD",
+        "modified": "#FFB86C",
+        "predictive": "#6272A4",
+        "renamed": "#50FA7B",
+        "success": "#50FA7B",
+        "unreachable": "#6272A4",
+        "warning": "#F1FA8C",
+        "syntax": {
+          "attribute": {
+            "color": "#50FA7B"
+          },
+          "boolean": {
+            "color": "#BD93F9"
+          },
+          "comment": {
+            "color": "#6272A4",
+            "font_style": "italic"
+          },
+          "comment.doc": {
+            "color": "#6272A4",
+            "font_style": "italic"
+          },
+          "constant": {
+            "color": "#BD93F9"
+          },
+          "constructor": {
+            "color": "#50FA7B"
+          },
+          "embedded": {
+            "color": "#F8F8F2"
+          },
+          "function": {
+            "color": "#50FA7B"
+          },
+          "keyword": {
+            "color": "#FF79C6"
+          },
+          "link_text": {
+            "color": "#8BE9FD",
+            "font_style": "normal"
+          },
+          "link_uri": {
+            "color": "#6272A4",
+            "font_style": "italic"
+          },
+          "number": {
+            "color": "#BD93F9"
+          },
+          "string": {
+            "color": "#F1FA8C"
+          },
+          "string.escape": {
+            "color": "#FFB86C"
+          },
+          "string.regex": {
+            "color": "#FFB86C"
+          },
+          "string.special": {
+            "color": "#8BE9FD"
+          },
+          "string.special.symbol": {
+            "color": "#8BE9FD"
+          },
+          "tag": {
+            "color": "#FF79C6"
+          },
+          "text.literal": {
+            "color": "#F1FA8C"
+          },
+          "title": {
+            "color": "#8BE9FD",
+            "font_weight": 600
+          },
+          "type": {
+            "color": "#8BE9FD"
+          },
+          "property": {
+            "color": "#F8F8F2"
+          },
+          "variable.special": {
+            "color": "#FF5555"
+          }
+        }
+      }
+    }
+  ]
+}

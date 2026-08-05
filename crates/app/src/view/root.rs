@@ -1,33 +1,91 @@
-use gpui::{AppContext, Context, Entity, IntoElement, ParentElement, Render, Styled, Window, div};
-use gpui_component::{ActiveTheme, StyledExt, TitleBar};
-use system::monitor::SystemMonitor;
+use std::time::Duration;
 
-use crate::view::process_list::ProcessListView;
+use gpui::{AppContext, Context, Entity, IntoElement, ParentElement, Render, Styled, Window, div};
+use gpui_component::{ActiveTheme, StyledExt};
+use system::monitor::{SystemMonitor, SystemSnapshot};
+
+use crate::{
+    history::History,
+    state::CurrentView,
+    view::{charts::ChartsView, process::ProcessView},
+    widgets::sidebar::{SideBar, SideBarEvent},
+};
 
 #[derive(Debug)]
 pub struct RootView {
-    process_list: Entity<ProcessListView>,
+    current_view: CurrentView,
+    sidebar: Entity<SideBar>,
+    process_list: Entity<ProcessView>,
+    charts_view: Entity<ChartsView>,
 }
 
 impl RootView {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let monitor = cx.new(|_cx| SystemMonitor::default());
-        Self::start_polling(monitor.clone(), cx);
+        let monitor = SystemMonitor::default();
+        let snapshot = cx.new(|_cx| monitor.snapshot());
+        let cpu_history = cx.new(|_cx| History::new());
+        let memory_history = cx.new(|_cx| History::new());
+        let sidebar = cx.new(|_| SideBar::new());
+        cx.subscribe(&sidebar, |this, _sidebar, event, cx| {
+            let SideBarEvent::Selected(view) = event;
+            this.current_view = *view;
+            cx.notify();
+        })
+        .detach();
+        let process_list = cx.new(|cx| {
+            ProcessView::new(
+                snapshot.clone(),
+                cpu_history.clone(),
+                memory_history.clone(),
+                window,
+                cx,
+            )
+        });
+        let charts_view = cx.new(|_| ChartsView::new(cpu_history.clone(), memory_history.clone()));
 
-        let process_list = cx.new(|cx| ProcessListView::new(monitor.clone(), window, cx));
+        Self::start_polling(
+            snapshot.clone(),
+            cpu_history.clone(),
+            memory_history.clone(),
+            cx,
+        );
 
-        Self { process_list }
+        Self {
+            current_view: CurrentView::default(),
+            sidebar,
+            process_list,
+            charts_view,
+        }
     }
 
-    fn start_polling(monitor: Entity<SystemMonitor>, cx: &mut Context<Self>) {
+    fn start_polling(
+        snapshot: Entity<SystemSnapshot>,
+        cpu_history: Entity<History<f32>>,
+        memory_history: Entity<History<u64>>,
+        cx: &mut Context<Self>,
+    ) {
         cx.spawn(async move |_this, cx| {
             loop {
-                cx.background_executor()
-                    .timer(std::time::Duration::from_secs(1))
+                cx.background_executor().timer(Duration::from_secs(1)).await;
+                let new_snapshot = cx
+                    .background_executor()
+                    .spawn(async {
+                        let monitor = SystemMonitor::default();
+                        monitor.snapshot()
+                    })
                     .await;
-
-                monitor.update(cx, |monitor, cx| {
-                    monitor.poll();
+                let cpu_usage = new_snapshot.cpu_usage;
+                let memory_usage = new_snapshot.memory_usage;
+                snapshot.update(cx, move |snapshot, cx| {
+                    *snapshot = new_snapshot;
+                    cx.notify();
+                });
+                cpu_history.update(cx, move |cpu_history, cx| {
+                    cpu_history.push_back(cpu_usage);
+                    cx.notify();
+                });
+                memory_history.update(cx, move |memory_history, cx| {
+                    memory_history.push_back(memory_usage);
                     cx.notify();
                 });
             }
@@ -39,10 +97,13 @@ impl RootView {
 impl Render for RootView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
-            .v_flex()
+            .h_flex()
             .size_full()
             .bg(cx.theme().background)
-            .child(TitleBar::new().mb_1().shadow_sm().child("Taskforge"))
-            .child(self.process_list.clone())
+            .child(self.sidebar.clone())
+            .child(match self.current_view {
+                CurrentView::Processes => self.process_list.clone().into_any_element(),
+                CurrentView::Charts => self.charts_view.clone().into_any_element(),
+            })
     }
 }

@@ -5,11 +5,14 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+circular-buffer.workspace = true
 gpui.workspace = true
 gpui-component.workspace = true
 gpui-component-assets.workspace = true
 gpui_platform.workspace = true
+rust-embed.workspace = true
 sysinfo.workspace = true
 system = { path = "../system" }
 tracing.workspace = true
-tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }

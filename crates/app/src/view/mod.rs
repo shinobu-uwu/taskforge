@@ -1,2 +1,3 @@
-pub mod process_list;
+pub mod charts;
+pub mod process;
 pub mod root;

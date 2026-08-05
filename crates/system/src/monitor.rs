@@ -1,28 +1,58 @@
-use circular_buffer::FixedCircularBuffer;
-use sysinfo::{CpuRefreshKind, MemoryRefreshKind, ProcessRefreshKind, RefreshKind, System};
-
-const HISTORY_LEN: usize = 1024;
+use sysinfo::{
+    CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System, ThreadKind,
+};
 
 #[derive(Debug)]
 pub struct SystemMonitor {
     pub system: System,
-    pub cpu_history: FixedCircularBuffer<f32, HISTORY_LEN>,
-    pub memory_history: FixedCircularBuffer<u64, HISTORY_LEN>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SystemSnapshot {
+    pub processes: Vec<ProcessSnapshot>,
+    pub cpu_usage: f32,
+    pub memory_usage: u64,
+    pub total_memory: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessSnapshot {
+    pub pid: Pid,
+    pub parent: Option<Pid>,
+    pub name: String,
+    pub cpu_usage: f32,
+    pub memory: u64,
+    pub thread_kind: Option<ThreadKind>,
 }
 
 impl SystemMonitor {
     pub fn new(system: System) -> Self {
-        Self {
-            system,
-            cpu_history: FixedCircularBuffer::new(),
-            memory_history: FixedCircularBuffer::new(),
+        Self { system }
+    }
+
+    pub fn snapshot(&self) -> SystemSnapshot {
+        SystemSnapshot {
+            processes: self
+                .system
+                .processes()
+                .values()
+                .map(|p| ProcessSnapshot {
+                    pid: p.pid(),
+                    parent: p.parent(),
+                    name: p.name().to_string_lossy().into_owned(),
+                    cpu_usage: p.cpu_usage(),
+                    memory: p.memory(),
+                    thread_kind: p.thread_kind(),
+                })
+                .collect(),
+            cpu_usage: self.system.global_cpu_usage(),
+            memory_usage: self.system.used_memory(),
+            total_memory: self.system.total_memory(),
         }
     }
 
-    pub fn poll(&mut self) {
+    pub fn refresh(&mut self) {
         self.system.refresh_specifics(Self::refresh_kind());
-        self.cpu_history.push_back(self.system.global_cpu_usage());
-        self.memory_history.push_back(self.system.used_memory());
     }
 
     fn refresh_kind() -> RefreshKind {

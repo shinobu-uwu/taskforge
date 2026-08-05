@@ -4,3 +4,10 @@ pub enum CurrentView {
     Processes,
     Charts,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum Order {
+    #[default]
+    Asc,
+    Desc,
+}

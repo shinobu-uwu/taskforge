@@ -65,17 +65,26 @@ impl RootView {
         cx: &mut Context<Self>,
     ) {
         cx.spawn(async move |_this, cx| {
+            let mut monitor = SystemMonitor::default();
+
             loop {
-                cx.background_executor().timer(Duration::from_secs(1)).await;
-                let new_snapshot = cx
+                cx.background_executor()
+                    .timer(Duration::from_millis(500))
+                    .await;
+
+                let (new_monitor, new_snapshot) = cx
                     .background_executor()
-                    .spawn(async {
-                        let monitor = SystemMonitor::default();
-                        monitor.snapshot()
+                    .spawn(async move {
+                        monitor.refresh();
+                        let snap = monitor.snapshot();
+                        (monitor, snap)
                     })
                     .await;
+                monitor = new_monitor;
+
                 let cpu_usage = new_snapshot.cpu_usage;
                 let memory_usage = new_snapshot.memory_usage;
+
                 snapshot.update(cx, move |snapshot, cx| {
                     *snapshot = new_snapshot;
                     cx.notify();

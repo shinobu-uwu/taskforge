@@ -1,13 +1,14 @@
 use gpui::{
-    App, AppContext, Context, Entity, IntoElement, ParentElement, Render, Styled, Window, div,
-    relative,
+    App, AppContext, Context, Entity, IntoElement, ParentElement, Render, Styled, Task, Window,
+    div, relative,
 };
 use gpui_component::{
-    ActiveTheme, IndexPath, StyledExt,
+    ActiveTheme, Icon, IndexPath, Sizable, StyledExt,
     label::Label,
     list::{List, ListDelegate, ListItem, ListState},
     white,
 };
+use sysinfo::Pid;
 use system::monitor::SystemSnapshot;
 
 use crate::{
@@ -29,6 +30,8 @@ pub struct ProcessView {
 pub struct ProcessListDelegate {
     snapshot: Entity<SystemSnapshot>,
     selected_index: Option<IndexPath>,
+    filtered: Vec<Pid>,
+    query: String,
 }
 
 impl ProcessView {
@@ -39,11 +42,30 @@ impl ProcessView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let mut filtered = snapshot
+            .read(cx)
+            .processes
+            .iter()
+            .map(|p| p.pid)
+            .collect::<Vec<Pid>>();
+        filtered.sort_unstable();
         let delegate = ProcessListDelegate {
             snapshot: snapshot.clone(),
+            filtered,
             selected_index: None,
+            query: String::new(),
         };
-        let list_state = cx.new(|cx| ListState::new(delegate, window, cx));
+        let list_state = cx.new(|cx| ListState::new(delegate, window, cx).searchable(true));
+
+        cx.observe(&snapshot, {
+            let list_state = list_state.clone();
+            move |_this, _snapshot, cx| {
+                list_state.update(cx, |state, cx| {
+                    state.delegate_mut().filter(cx);
+                });
+            }
+        })
+        .detach();
 
         Self {
             list_state,
@@ -56,6 +78,7 @@ impl ProcessView {
 impl Render for ProcessView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .flex()
             .h_flex()
             .size_full()
             .child(
@@ -66,6 +89,7 @@ impl Render for ProcessView {
             )
             .child(
                 div()
+                    .flex()
                     .v_flex()
                     .h_full()
                     .flex_basis(relative(1. / 4.))
@@ -76,15 +100,40 @@ impl Render for ProcessView {
                     .child(Label::new("Performance").text_lg())
                     .child(
                         div()
-                            .w_full()
-                            .h_40()
-                            .child(cpu_chart(&self.cpu_history, cx)),
-                    )
-                    .child(
-                        div()
-                            .w_full()
-                            .h_40()
-                            .child(memory_chart(&self.memory_history, cx)),
+                            .flex()
+                            .flex_1()
+                            .v_flex()
+                            .justify_evenly()
+                            .items_center()
+                            .child(
+                                div()
+                                    .w_full()
+                                    .h_48()
+                                    .child(cpu_chart(&self.cpu_history, cx)),
+                            )
+                            .child(
+                                div()
+                                    .w_full()
+                                    .h_48()
+                                    .child(memory_chart(&self.memory_history, cx)),
+                            )
+                            .child(
+                                div()
+                                    .w_full()
+                                    .h_48()
+                                    .child(cpu_chart(&self.cpu_history, cx)),
+                            )
+                            .child(
+                                div()
+                                    .p_4()
+                                    .border_1()
+                                    .border_color(white())
+                                    .rounded_lg()
+                                    .bg(cx.theme().accent)
+                                    .child("CPU Usage")
+                                    .child("Memory Usage")
+                                    .child("Uptime"),
+                            ),
                     ),
             )
     }
@@ -93,8 +142,8 @@ impl Render for ProcessView {
 impl ListDelegate for ProcessListDelegate {
     type Item = ListItem;
 
-    fn items_count(&self, _section: usize, cx: &App) -> usize {
-        self.snapshot.read(cx).processes.len()
+    fn items_count(&self, _section: usize, _cx: &App) -> usize {
+        self.filtered.len()
     }
 
     fn render_item(
@@ -103,7 +152,11 @@ impl ListDelegate for ProcessListDelegate {
         _window: &mut Window,
         cx: &mut Context<ListState<Self>>,
     ) -> Option<Self::Item> {
-        let name = self.snapshot.read(cx).processes[ix.row].name.clone();
+        let snapshot = self.snapshot.read(cx);
+
+        let pid = self.filtered[ix.row];
+
+        let process = snapshot.processes.iter().find(|p| p.pid == pid)?;
 
         Some(
             ListItem::new(ix)
@@ -116,8 +169,8 @@ impl ListDelegate for ProcessListDelegate {
                     div()
                         .h_flex()
                         .gap_2()
-                        .child(FontAwesomeIconName::RegularHdd)
-                        .child(Label::new(name)),
+                        .child(Icon::new(FontAwesomeIconName::RegularHdd).large())
+                        .child(Label::new(process.name.clone())),
                 ),
         )
     }
@@ -129,6 +182,40 @@ impl ListDelegate for ProcessListDelegate {
         cx: &mut Context<ListState<Self>>,
     ) {
         self.selected_index = ix;
+        cx.notify();
+    }
+
+    fn perform_search(
+        &mut self,
+        query: &str,
+        _window: &mut Window,
+        cx: &mut Context<ListState<Self>>,
+    ) -> Task<()> {
+        self.query = query.to_string();
+        self.filter(cx);
+        Task::ready(())
+    }
+}
+
+impl ProcessListDelegate {
+    fn filter(&mut self, cx: &mut Context<ListState<Self>>) {
+        let snapshot = self.snapshot.read(cx);
+        self.filtered.clear();
+
+        if self.query.is_empty() {
+            self.filtered
+                .extend(snapshot.processes.iter().map(|p| p.pid));
+        } else {
+            let needle = self.query.to_ascii_lowercase();
+            self.filtered.extend(
+                snapshot
+                    .processes
+                    .iter()
+                    .filter(|p| p.name.to_ascii_lowercase().contains(&needle))
+                    .map(|p| p.pid),
+            );
+        }
+
         cx.notify();
     }
 }

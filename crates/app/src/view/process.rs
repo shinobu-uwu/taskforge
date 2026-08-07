@@ -4,12 +4,13 @@ use gpui::{
 };
 use gpui_component::{
     ActiveTheme, Icon, IndexPath, Sizable, StyledExt,
+    button::Button,
     label::Label,
     list::{List, ListDelegate, ListItem, ListState},
     white,
 };
 use sysinfo::Pid;
-use system::monitor::SystemSnapshot;
+use system::monitor::{SystemMonitor, SystemSnapshot};
 
 use crate::{
     history::History,
@@ -28,6 +29,7 @@ pub struct ProcessView {
 
 #[derive(Debug)]
 pub struct ProcessListDelegate {
+    monitor: Entity<SystemMonitor>,
     snapshot: Entity<SystemSnapshot>,
     selected_index: Option<IndexPath>,
     filtered: Vec<Pid>,
@@ -36,6 +38,7 @@ pub struct ProcessListDelegate {
 
 impl ProcessView {
     pub fn new(
+        monitor: Entity<SystemMonitor>,
         snapshot: Entity<SystemSnapshot>,
         cpu_history: Entity<History<f32>>,
         memory_history: Entity<History<u64>>,
@@ -45,11 +48,12 @@ impl ProcessView {
         let mut filtered = snapshot
             .read(cx)
             .processes
-            .iter()
-            .map(|p| p.pid)
+            .keys()
+            .copied()
             .collect::<Vec<Pid>>();
         filtered.sort_unstable();
         let delegate = ProcessListDelegate {
+            monitor,
             snapshot: snapshot.clone(),
             filtered,
             selected_index: None,
@@ -152,11 +156,11 @@ impl ListDelegate for ProcessListDelegate {
         _window: &mut Window,
         cx: &mut Context<ListState<Self>>,
     ) -> Option<Self::Item> {
+        let &pid = self.filtered.get(ix.row)?;
         let snapshot = self.snapshot.read(cx);
-
-        let pid = self.filtered[ix.row];
-
-        let process = snapshot.processes.iter().find(|p| p.pid == pid)?;
+        let process = snapshot.processes.get(&pid)?;
+        let monitor = self.monitor.clone();
+        let snapshot = self.snapshot.clone();
 
         Some(
             ListItem::new(ix)
@@ -171,7 +175,36 @@ impl ListDelegate for ProcessListDelegate {
                         .gap_2()
                         .child(Icon::new(FontAwesomeIconName::RegularHdd).large())
                         .child(Label::new(process.name.clone())),
-                ),
+                )
+                .suffix(move |_, _cx| {
+                    Button::new(("kill-process", pid.as_u32() as usize))
+                        .small()
+                        .outline()
+                        .label("Kill")
+                        .tooltip("Kill process")
+                        .on_click({
+                            let monitor = monitor.clone();
+                            let snapshot = snapshot.clone();
+                            move |_, _, cx| {
+                                let new_snapshot = monitor.update(cx, |monitor, _cx| {
+                                    let killed = monitor.kill_process(pid);
+                                    if killed {
+                                        monitor.refresh();
+                                        Some(monitor.snapshot())
+                                    } else {
+                                        None
+                                    }
+                                });
+
+                                if let Some(new_snapshot) = new_snapshot {
+                                    snapshot.update(cx, |snapshot, cx| {
+                                        *snapshot = new_snapshot;
+                                        cx.notify();
+                                    });
+                                }
+                            }
+                        })
+                }),
         )
     }
 
@@ -192,6 +225,7 @@ impl ListDelegate for ProcessListDelegate {
         cx: &mut Context<ListState<Self>>,
     ) -> Task<()> {
         self.query = query.to_string();
+        self.selected_index = None;
         self.filter(cx);
         Task::ready(())
     }
@@ -204,18 +238,18 @@ impl ProcessListDelegate {
 
         if self.query.is_empty() {
             self.filtered
-                .extend(snapshot.processes.iter().map(|p| p.pid));
+                .extend(snapshot.processes.values().map(|p| p.pid));
         } else {
             let needle = self.query.to_ascii_lowercase();
             self.filtered.extend(
                 snapshot
                     .processes
-                    .iter()
+                    .values()
                     .filter(|p| p.name.to_ascii_lowercase().contains(&needle))
                     .map(|p| p.pid),
             );
         }
-
+        self.filtered.sort_unstable();
         cx.notify();
     }
 }

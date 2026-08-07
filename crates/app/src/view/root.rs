@@ -21,8 +21,11 @@ pub struct RootView {
 
 impl RootView {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let monitor = SystemMonitor::default();
-        let snapshot = cx.new(|_cx| monitor.snapshot());
+        let monitor = cx.new(|_| SystemMonitor::default());
+        let snapshot = cx.new({
+            let monitor = monitor.clone();
+            move |cx| monitor.read(cx).snapshot()
+        });
         let cpu_history = cx.new(|_cx| History::new());
         let memory_history = cx.new(|_cx| History::new());
         let sidebar = cx.new(|_| SideBar::new());
@@ -34,6 +37,7 @@ impl RootView {
         .detach();
         let process_list = cx.new(|cx| {
             ProcessView::new(
+                monitor.clone(),
                 snapshot.clone(),
                 cpu_history.clone(),
                 memory_history.clone(),
@@ -44,6 +48,7 @@ impl RootView {
         let charts_view = cx.new(|_| ChartsView::new(cpu_history.clone(), memory_history.clone()));
 
         Self::start_polling(
+            monitor,
             snapshot.clone(),
             cpu_history.clone(),
             memory_history.clone(),
@@ -59,28 +64,22 @@ impl RootView {
     }
 
     fn start_polling(
+        monitor: Entity<SystemMonitor>,
         snapshot: Entity<SystemSnapshot>,
         cpu_history: Entity<History<f32>>,
         memory_history: Entity<History<u64>>,
         cx: &mut Context<Self>,
     ) {
         cx.spawn(async move |_this, cx| {
-            let mut monitor = SystemMonitor::default();
-
             loop {
                 cx.background_executor()
                     .timer(Duration::from_millis(500))
                     .await;
 
-                let (new_monitor, new_snapshot) = cx
-                    .background_executor()
-                    .spawn(async move {
-                        monitor.refresh();
-                        let snap = monitor.snapshot();
-                        (monitor, snap)
-                    })
-                    .await;
-                monitor = new_monitor;
+                let new_snapshot = monitor.update(cx, |monitor, _cx| {
+                    monitor.refresh();
+                    monitor.snapshot()
+                });
 
                 let cpu_usage = new_snapshot.cpu_usage;
                 let memory_usage = new_snapshot.memory_usage;

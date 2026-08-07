@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use sysinfo::{
     CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System, ThreadKind,
 };
@@ -9,7 +11,7 @@ pub struct SystemMonitor {
 
 #[derive(Debug, Clone)]
 pub struct SystemSnapshot {
-    pub processes: Vec<ProcessSnapshot>,
+    pub processes: HashMap<Pid, ProcessSnapshot>,
     pub cpu_usage: f32,
     pub memory_usage: u64,
     pub total_memory: u64,
@@ -35,14 +37,19 @@ impl SystemMonitor {
             processes: self
                 .system
                 .processes()
-                .values()
-                .map(|p| ProcessSnapshot {
-                    pid: p.pid(),
-                    parent: p.parent(),
-                    name: p.name().to_string_lossy().into_owned(),
-                    cpu_usage: p.cpu_usage(),
-                    memory: p.memory(),
-                    thread_kind: p.thread_kind(),
+                .iter()
+                .map(|(pid, proc)| {
+                    (
+                        *pid,
+                        ProcessSnapshot {
+                            pid: proc.pid(),
+                            parent: proc.parent(),
+                            name: proc.name().to_string_lossy().into_owned(),
+                            cpu_usage: proc.cpu_usage(),
+                            memory: proc.memory(),
+                            thread_kind: proc.thread_kind(),
+                        },
+                    )
                 })
                 .collect(),
             cpu_usage: self.system.global_cpu_usage(),
@@ -53,6 +60,10 @@ impl SystemMonitor {
 
     pub fn refresh(&mut self) {
         self.system.refresh_specifics(Self::refresh_kind());
+    }
+
+    pub fn kill_process(&mut self, pid: Pid) -> bool {
+        self.system.processes().get(&pid).is_some_and(|p| p.kill())
     }
 
     fn refresh_kind() -> RefreshKind {

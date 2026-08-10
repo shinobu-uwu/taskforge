@@ -9,8 +9,8 @@ use gpui_component::{
     list::{List, ListDelegate, ListItem, ListState},
     white,
 };
-use sysinfo::Pid;
-use system::monitor::{SystemMonitor, SystemSnapshot};
+use sysinfo::{Pid, ThreadKind};
+use system::monitor::{ProcessSnapshot, SystemMonitor, SystemSnapshot};
 
 use crate::{
     history::History,
@@ -48,8 +48,9 @@ impl ProcessView {
         let mut filtered = snapshot
             .read(cx)
             .processes
-            .keys()
-            .copied()
+            .values()
+            .filter(|process| should_show_process(process))
+            .map(|process| process.pid)
             .collect::<Vec<Pid>>();
         filtered.sort_unstable();
         let delegate = ProcessListDelegate {
@@ -59,7 +60,7 @@ impl ProcessView {
             selected_index: None,
             query: String::new(),
         };
-        let list_state = cx.new(|cx| ListState::new(delegate, window, cx).searchable(true));
+        let list_state = cx.new(|cx| ListState::new(delegate, window, cx));
 
         cx.observe(&snapshot, {
             let list_state = list_state.clone();
@@ -238,18 +239,60 @@ impl ProcessListDelegate {
 
         if self.query.is_empty() {
             self.filtered
-                .extend(snapshot.processes.values().map(|p| p.pid));
+                .extend(snapshot.processes.values().filter_map(visible_process_pid));
         } else {
             let needle = self.query.to_ascii_lowercase();
             self.filtered.extend(
                 snapshot
                     .processes
                     .values()
-                    .filter(|p| p.name.to_ascii_lowercase().contains(&needle))
+                    .filter(|p| {
+                        should_show_process(p) && p.name.to_ascii_lowercase().contains(&needle)
+                    })
                     .map(|p| p.pid),
             );
         }
         self.filtered.sort_unstable();
         cx.notify();
+    }
+}
+
+fn visible_process_pid(process: &ProcessSnapshot) -> Option<Pid> {
+    should_show_process(process).then_some(process.pid)
+}
+
+fn should_show_process(process: &ProcessSnapshot) -> bool {
+    process.thread_kind != Some(ThreadKind::Kernel)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn process_with_thread_kind(thread_kind: Option<ThreadKind>) -> ProcessSnapshot {
+        ProcessSnapshot {
+            pid: Pid::from_u32(1),
+            parent: None,
+            name: "process".to_string(),
+            cpu_usage: 0.0,
+            memory: 0,
+            thread_kind,
+        }
+    }
+
+    #[test]
+    fn hides_kernel_processes() {
+        let process = process_with_thread_kind(Some(ThreadKind::Kernel));
+
+        assert!(!should_show_process(&process));
+    }
+
+    #[test]
+    fn shows_userland_and_unknown_thread_kind_processes() {
+        let userland_process = process_with_thread_kind(Some(ThreadKind::Userland));
+        let unknown_process = process_with_thread_kind(None);
+
+        assert!(should_show_process(&userland_process));
+        assert!(should_show_process(&unknown_process));
     }
 }

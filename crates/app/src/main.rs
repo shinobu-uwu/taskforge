@@ -34,10 +34,16 @@ fn main() -> anyhow::Result<()> {
             info!("Initialed themes");
 
             cx.spawn(async move |cx| {
-                cx.open_window(WindowOptions::default(), |window, cx| {
-                    let view = cx.new(|cx| RootView::new(window, cx));
-                    cx.new(|cx| Root::new(view, window, cx))
-                })
+                cx.open_window(
+                    WindowOptions {
+                        app_id: Some("taskforge".to_owned()),
+                        ..Default::default()
+                    },
+                    |window, cx| {
+                        let view = cx.new(|cx| RootView::new(window, cx));
+                        cx.new(|cx| Root::new(view, window, cx))
+                    },
+                )
                 .expect("Failed to open window");
             })
             .detach();

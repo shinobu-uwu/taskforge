@@ -99,6 +99,7 @@
         checks = self.checks.${system};
 
         packages = [
+          pkgs.cargo-watch
           pkgs.pkg-config
           pkgs.wayland
           pkgs.libxkbcommon

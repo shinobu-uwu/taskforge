@@ -1,0 +1,12 @@
+[package]
+name = "app-iced"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+iced = { workspace = true, features = ["tokio"] }
+iced_fonts = { workspace = true, features = ["advanced_text", "lucide"] }
+open.workspace = true
+sysinfo.workspace = true
+system = { path = "../system" }

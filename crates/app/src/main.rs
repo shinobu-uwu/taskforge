@@ -1,15 +1,13 @@
-mod history;
-mod state;
-mod view;
+use iced::{
+    Size,
+    window::{Settings, settings::PlatformSpecific},
+};
+
+use crate::app::App;
+
+mod app;
+mod screen;
 mod widgets;
-
-use std::path::PathBuf;
-
-use crate::view::root::RootView;
-use crate::widgets::icon::Assets;
-use gpui::{App, AppContext, SharedString, WindowOptions};
-use gpui_component::{Root, Theme, ThemeRegistry};
-use tracing::info;
 
 fn main() -> anyhow::Result<()> {
     let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
@@ -20,46 +18,20 @@ fn main() -> anyhow::Result<()> {
                 .add_directive(tracing::Level::INFO.into()),
         )
         .init();
-    info!("Starting app");
-
-    gpui_platform::application()
-        .with_assets(Assets)
-        .run(move |cx| {
-            info!("Initializing gpui-component");
-            gpui_component::init(cx);
-            info!("Initialed gpui-component");
-
-            info!("Initializing themes");
-            init_theme(cx);
-            info!("Initialed themes");
-
-            cx.spawn(async move |cx| {
-                cx.open_window(
-                    WindowOptions {
-                        app_id: Some("taskforge".to_owned()),
-                        ..Default::default()
-                    },
-                    |window, cx| {
-                        let view = cx.new(|cx| RootView::new(window, cx));
-                        cx.new(|cx| Root::new(view, window, cx))
-                    },
-                )
-                .expect("Failed to open window");
-            })
-            .detach();
-        });
+    iced::application(App::new, App::update, App::view)
+        .font(iced_fonts::LUCIDE_FONT_BYTES)
+        .subscription(App::subscription)
+        .theme(|app: &App| app.current_theme.clone())
+        .window(Settings {
+            size: Size::new(1100.0, 700.0),
+            min_size: Some(Size::new(800.0, 500.0)),
+            platform_specific: PlatformSpecific {
+                application_id: "taskforge".to_owned(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .run()?;
 
     Ok(())
-}
-
-fn init_theme(cx: &mut App) {
-    let theme_name = SharedString::from("Dracula");
-    // Load and watch themes from ./themes directory
-    if let Err(err) = ThemeRegistry::watch_dir(PathBuf::from("./themes"), cx, move |cx| {
-        if let Some(theme) = ThemeRegistry::global(cx).themes().get(&theme_name).cloned() {
-            Theme::global_mut(cx).apply_config(&theme);
-        }
-    }) {
-        tracing::error!("Failed to watch themes directory: {}", err);
-    }
 }

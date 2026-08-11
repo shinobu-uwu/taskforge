@@ -3,7 +3,7 @@ use iced::{
     widget::{button, column, row, rule, scrollable, space, text, text_input},
 };
 use iced_fonts::lucide::advanced_text::search;
-use sysinfo::{Pid, ThreadKind};
+use sysinfo::Pid;
 use system::monitor::SystemSnapshot;
 
 use crate::widgets::icon::IntoTextInputIcon;
@@ -18,13 +18,27 @@ pub(crate) struct ProcessScreen {
 pub(crate) enum Message {
     SearchChanged(String),
     ProcessSelected(Pid),
+    KillProcess(Pid),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Action {
+    None,
+    KillProcess(Pid),
 }
 
 impl ProcessScreen {
-    pub(crate) fn update(&mut self, message: Message) {
+    pub(crate) fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::SearchChanged(query) => self.search_query = query,
-            Message::ProcessSelected(pid) => self.selected_process = Some(pid),
+            Message::SearchChanged(query) => {
+                self.search_query = query;
+                Action::None
+            }
+            Message::ProcessSelected(pid) => {
+                self.selected_process = Some(pid);
+                Action::None
+            }
+            Message::KillProcess(pid) => Action::KillProcess(pid),
         }
     }
 
@@ -32,11 +46,7 @@ impl ProcessScreen {
         let mut pids = snapshot
             .processes
             .values()
-            .filter(|process| {
-                process
-                    .thread_kind
-                    .is_some_and(|kind| kind == ThreadKind::Userland)
-            })
+            .filter(|p| p.thread_kind.is_none())
             .filter(|p| {
                 p.name
                     .to_lowercase()
@@ -45,6 +55,7 @@ impl ProcessScreen {
             .map(|p| p.pid)
             .collect::<Vec<_>>();
         pids.sort_unstable();
+        dbg!(snapshot.processes.get(&Pid::from_u32(1)));
 
         column![
             row![
@@ -62,15 +73,19 @@ impl ProcessScreen {
             scrollable(column(pids.into_iter().map(|pid| {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
 
-                button(row![text(process.name.clone())])
-                    .width(Fill)
-                    .style(if self.selected_process == Some(pid) {
-                        button::primary
-                    } else {
-                        button::text
-                    })
-                    .on_press(Message::ProcessSelected(pid))
-                    .into()
+                button(row![
+                    iced_fonts::lucide::cpu(),
+                    text(process.name.clone()),
+                    button(iced_fonts::lucide::x()).on_press(Message::KillProcess(pid))
+                ])
+                .width(Fill)
+                .style(if self.selected_process == Some(pid) {
+                    button::primary
+                } else {
+                    button::text
+                })
+                .on_press(Message::ProcessSelected(pid))
+                .into()
             })))
             .width(Fill)
             .height(Fill),

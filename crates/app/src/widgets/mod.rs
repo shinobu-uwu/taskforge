@@ -1,3 +1,2 @@
-pub mod chart;
-pub mod icon;
+pub(crate) mod icon;
 pub mod sidebar;

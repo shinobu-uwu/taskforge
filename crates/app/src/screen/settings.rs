@@ -1,8 +1,10 @@
+use enum_iterator::all;
 use iced::{
-    Element, Fill, Theme,
-    theme::Base,
+    Element, Fill,
     widget::{button, column, scrollable, text},
 };
+
+use crate::config::Theme;
 
 #[derive(Debug, Default)]
 pub(crate) struct SettingsScreen;
@@ -16,14 +18,15 @@ impl SettingsScreen {
     pub(crate) fn view(&self, current_theme: &Theme) -> Element<'_, Message> {
         column![
             text("Theme:"),
-            scrollable(column(Theme::ALL.iter().map(|t| {
+            scrollable(column(all::<Theme>().map(|t| {
                 button(text(t.name()))
                     .width(Fill)
-                    .style(if current_theme == t {
+                    .style(if *current_theme == t {
                         button::primary
                     } else {
-                        button::secondary
+                        button::text
                     })
+                    .padding(8)
                     .on_press(Message::ThemeChange(t.clone()))
                     .into()
             })))

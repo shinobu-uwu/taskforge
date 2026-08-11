@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use sysinfo::{
     CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System, ThreadKind,
@@ -15,6 +15,7 @@ pub struct SystemSnapshot {
     pub cpu_usage: f32,
     pub memory_usage: u64,
     pub total_memory: u64,
+    pub uptime: Duration,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +56,7 @@ impl SystemMonitor {
             cpu_usage: self.system.global_cpu_usage(),
             memory_usage: self.system.used_memory(),
             total_memory: self.system.total_memory(),
+            uptime: Duration::from_secs(System::uptime()),
         }
     }
 

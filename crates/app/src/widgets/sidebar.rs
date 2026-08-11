@@ -21,14 +21,14 @@ pub(crate) fn view(current_screen: Screen) -> Element<'static, Message> {
         })
         .on_press(Message::Navigate(Screen::Processes));
 
-    let charts = button("Charts")
-        .width(Fill)
-        .style(if current_screen == Screen::Charts {
-            button::primary
-        } else {
-            button::secondary
-        })
-        .on_press(Message::Navigate(Screen::Charts));
+    // let charts = button("Charts")
+    //     .width(Fill)
+    //     .style(if current_screen == Screen::Charts {
+    //         button::primary
+    //     } else {
+    //         button::secondary
+    //     })
+    //     .on_press(Message::Navigate(Screen::Charts));
     let settings = button("Settings")
         .width(Fill)
         .style(if current_screen == Screen::Settings {
@@ -45,7 +45,7 @@ pub(crate) fn view(current_screen: Screen) -> Element<'static, Message> {
                     .style(button::text)
                     .on_press(Message::OpenWebsite),
                 processes,
-                charts,
+                // charts,
                 space::vertical(),
                 settings,
             ]

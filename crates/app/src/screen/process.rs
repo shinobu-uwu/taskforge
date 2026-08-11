@@ -2,7 +2,7 @@ use iced::{
     Center, Element, Fill,
     widget::{button, column, row, rule, scrollable, space, text, text_input},
 };
-use iced_fonts::lucide::advanced_text::search;
+use iced_fonts::lucide::{self, advanced_text::search};
 use sysinfo::Pid;
 use system::monitor::SystemSnapshot;
 
@@ -71,14 +71,26 @@ impl ProcessScreen {
             rule::horizontal(1),
             scrollable(column(pids.into_iter().map(|pid| {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
+                let is_selected = self.selected_process == Some(pid);
 
-                button(row![
-                    iced_fonts::lucide::cpu(),
-                    text(process.name.clone()),
-                    button(iced_fonts::lucide::x()).on_press(Message::KillProcess(pid))
-                ])
+                button(
+                    row![
+                        lucide::cpu(),
+                        text(process.name.clone()).width(Fill),
+                        button(lucide::x())
+                            .on_press(Message::KillProcess(pid))
+                            .style(if is_selected {
+                                button::secondary
+                            } else {
+                                button::primary
+                            })
+                    ]
+                    .align_y(Center)
+                    .spacing(8)
+                    .padding(8),
+                )
                 .width(Fill)
-                .style(if self.selected_process == Some(pid) {
+                .style(if is_selected {
                     button::primary
                 } else {
                     button::text

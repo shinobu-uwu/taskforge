@@ -9,9 +9,13 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = "1"
 circular-buffer = "2.0.0"
+confy = "2"
+enum-iterator = "2"
 iced = "0.14"
 iced_fonts = "0.3"
 open = "5.4.1"
+plotters = "0.3"
+plotters-iced = { package = "plotters-iced2", version = "0.14" }
 serde = { version = "1", features = ["derive"] }
 sysinfo = "0.39.6"
 thiserror = "2"

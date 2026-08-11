@@ -13,8 +13,6 @@ pub(crate) enum Message {
 }
 
 impl SettingsScreen {
-    pub(crate) fn update(&mut self, message: Message) {}
-
     pub(crate) fn view(&self, current_theme: &Theme) -> Element<'_, Message> {
         column![
             text("Theme:"),

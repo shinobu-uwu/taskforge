@@ -55,7 +55,6 @@ impl ProcessScreen {
             .map(|p| p.pid)
             .collect::<Vec<_>>();
         pids.sort_unstable();
-        dbg!(snapshot.processes.get(&Pid::from_u32(1)));
 
         column![
             row![

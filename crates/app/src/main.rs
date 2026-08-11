@@ -15,7 +15,7 @@ fn main() -> anyhow::Result<()> {
         .with_writer(non_blocking)
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(tracing::Level::INFO.into()),
+                .add_directive(tracing::Level::WARN.into()),
         )
         .init();
     iced::application(App::new, App::update, App::view)

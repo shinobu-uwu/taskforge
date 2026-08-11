@@ -73,29 +73,32 @@ impl ProcessScreen {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
                 let is_selected = self.selected_process == Some(pid);
 
-                button(
-                    row![
-                        lucide::cpu(),
-                        text(process.name.clone()).width(Fill),
-                        button(lucide::x())
-                            .on_press(Message::KillProcess(pid))
-                            .style(if is_selected {
-                                button::secondary
-                            } else {
-                                button::primary
-                            })
-                    ]
-                    .align_y(Center)
-                    .spacing(8)
-                    .padding(8),
-                )
-                .width(Fill)
-                .style(if is_selected {
-                    button::primary
-                } else {
-                    button::text
-                })
-                .on_press(Message::ProcessSelected(pid))
+                column![
+                    button(
+                        row![
+                            lucide::cpu(),
+                            text(process.name.clone()).width(Fill),
+                            button(lucide::x())
+                                .on_press(Message::KillProcess(pid))
+                                .style(if is_selected {
+                                    button::secondary
+                                } else {
+                                    button::primary
+                                })
+                        ]
+                        .align_y(Center)
+                        .spacing(8)
+                        .padding(8),
+                    )
+                    .width(Fill)
+                    .style(if is_selected {
+                        button::primary
+                    } else {
+                        button::text
+                    })
+                    .on_press(Message::ProcessSelected(pid)),
+                    rule::horizontal(1)
+                ]
                 .into()
             })))
             .width(Fill)

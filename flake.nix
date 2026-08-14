@@ -103,6 +103,7 @@
           pkgs.pkg-config
           pkgs.wayland
           pkgs.libxkbcommon
+          pkgs.heaptrack
         ];
 
         LD_LIBRARY_PATH = lib.makeLibraryPath runtimeDeps;

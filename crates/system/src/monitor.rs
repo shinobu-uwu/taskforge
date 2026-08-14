@@ -94,7 +94,12 @@ impl SystemMonitor {
 
     fn refresh_kind() -> RefreshKind {
         RefreshKind::nothing()
-            .with_processes(ProcessRefreshKind::everything())
+            .with_processes(
+                ProcessRefreshKind::nothing()
+                    .with_cpu()
+                    .with_memory()
+                    .without_tasks(),
+            )
             .with_cpu(CpuRefreshKind::everything())
             .with_memory(MemoryRefreshKind::everything())
     }

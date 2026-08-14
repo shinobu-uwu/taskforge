@@ -6,6 +6,7 @@ use sysinfo::{
 };
 
 use crate::{
+    cpu::CpuUsage,
     disk::{DiskSnapshot, DiskUsage},
     memory::Memory,
 };
@@ -19,7 +20,7 @@ pub struct SystemMonitor {
 #[derive(Debug, Clone)]
 pub struct SystemSnapshot {
     pub processes: HashMap<Pid, ProcessSnapshot>,
-    pub cpu_usage: f32,
+    pub cpu_usage: CpuUsage,
     pub memory_usage: Memory,
     pub total_memory: Memory,
     pub uptime: Duration,
@@ -61,7 +62,10 @@ impl SystemMonitor {
                     )
                 })
                 .collect(),
-            cpu_usage: self.system.global_cpu_usage(),
+            cpu_usage: CpuUsage {
+                total: self.system.global_cpu_usage(),
+                cpus: self.system.cpus().iter().map(|c| c.cpu_usage()).collect(),
+            },
             memory_usage: Memory::from_bytes(self.system.used_memory()),
             total_memory: Memory::from_bytes(self.system.total_memory()),
             uptime: Duration::from_secs(System::uptime()),

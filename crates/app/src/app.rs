@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-const POLL_INTERVAL: Duration = Duration::from_secs(1);
+const POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 #[derive(Debug)]
 pub struct App {
@@ -125,7 +125,7 @@ impl App {
             }
             Message::MonitorUpdated { monitor, snapshot } => {
                 self.monitor = Some(monitor);
-                self.cpu_history.push_back(snapshot.cpu_usage);
+                self.cpu_history.push_back(snapshot.cpu_usage.total);
                 self.memory_history.push_back(snapshot.memory_usage);
                 for disk in &snapshot.disks {
                     if let Some(history) = self

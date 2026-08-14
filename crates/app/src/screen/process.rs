@@ -6,7 +6,7 @@ use iced_fonts::lucide::{self, advanced_text::search};
 use sysinfo::Pid;
 use system::monitor::SystemSnapshot;
 
-use crate::widgets::icon::IntoTextInputIcon;
+use crate::widgets::{button::icon_button, icon::IntoTextInputIcon};
 
 #[derive(Debug, Default)]
 pub(crate) struct ProcessScreen {
@@ -78,13 +78,7 @@ impl ProcessScreen {
                         row![
                             lucide::cpu(),
                             text(process.name.clone()).width(Fill),
-                            button(lucide::x())
-                                .on_press(Message::KillProcess(pid))
-                                .style(if is_selected {
-                                    button::secondary
-                                } else {
-                                    button::primary
-                                })
+                            icon_button(lucide::x()).on_press(Message::KillProcess(pid))
                         ]
                         .align_y(Center)
                         .spacing(8)

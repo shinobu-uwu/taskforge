@@ -1,63 +1,163 @@
+use std::time::Instant;
+
 use iced::{
-    Element, Fill,
+    Alignment::Center,
+    Animation, Element, Fill, Subscription,
     widget::{button, column, container, row, rule, space},
 };
+use iced_fonts::lucide;
 
-use crate::app::Screen;
+use crate::{
+    app::Screen,
+    widgets::button::{icon_button, rounded},
+};
+
+const EXPANDED_WIDTH: u32 = 200;
+const BUTTON_SIZE: u32 = 36;
+const PADDING: f32 = 16.0;
+const COLLAPSED_WIDTH: u32 = PADDING as u32 * 2 + BUTTON_SIZE;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
-    Navigate(Screen),
-    OpenWebsite,
+pub struct Sidebar {
+    expanded: Animation<bool>,
+    now: Instant,
 }
 
-pub(crate) fn view(current_screen: Screen) -> Element<'static, Message> {
-    let processes = button("Processes")
-        .width(Fill)
-        .style(if current_screen == Screen::Processes {
+#[derive(Debug, Clone)]
+pub enum Message {
+    Navigate(Screen),
+    Expand,
+    Collapse,
+    Frame(Instant),
+}
+
+impl Sidebar {
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::Navigate(_) => {} // handled by app
+            Message::Expand => {
+                self.now = Instant::now();
+                self.expanded.go_mut(true, self.now);
+            }
+            Message::Collapse => {
+                self.now = Instant::now();
+                self.expanded.go_mut(false, self.now);
+            }
+            Message::Frame(i) => self.now = i,
+        }
+    }
+
+    pub fn view(&self, current_screen: Screen) -> Element<'static, Message> {
+        let width =
+            self.expanded
+                .interpolate(COLLAPSED_WIDTH as f32, EXPANDED_WIDTH as f32, self.now);
+        let expanded = self.expanded.value();
+
+        let processes = if expanded {
+            button(
+                row![lucide::sliders_horizontal(), "Processes"]
+                    .width(Fill)
+                    .spacing(4)
+                    .height(Fill)
+                    .align_y(Center),
+            )
+        } else {
+            icon_button(lucide::sliders_horizontal())
+        }
+        .height(BUTTON_SIZE)
+        .style(rounded(if current_screen == Screen::Processes {
             button::primary
         } else {
             button::secondary
-        })
+        }))
         .on_press(Message::Navigate(Screen::Processes));
 
-    // let charts = button("Charts")
-    //     .width(Fill)
-    //     .style(if current_screen == Screen::Charts {
-    //         button::primary
-    //     } else {
-    //         button::secondary
-    //     })
-    //     .on_press(Message::Navigate(Screen::Charts));
-    let settings = button("Settings")
-        .width(Fill)
-        .style(if current_screen == Screen::Settings {
+        let charts = if expanded {
+            button(
+                row![lucide::chart_area(), "Performance"]
+                    .width(Fill)
+                    .spacing(4)
+                    .height(Fill)
+                    .align_y(Center),
+            )
+        } else {
+            icon_button(lucide::chart_area())
+        }
+        .height(BUTTON_SIZE)
+        .style(rounded(if current_screen == Screen::Charts {
             button::primary
         } else {
             button::secondary
-        })
+        }))
+        .on_press(Message::Navigate(Screen::Charts));
+
+        let settings = if expanded {
+            button(
+                row![lucide::settings(), "Settings"]
+                    .width(Fill)
+                    .spacing(4)
+                    .height(Fill)
+                    .align_y(Center),
+            )
+        } else {
+            icon_button(lucide::settings())
+        }
+        .height(BUTTON_SIZE)
+        .style(rounded(if current_screen == Screen::Settings {
+            button::primary
+        } else {
+            button::secondary
+        }))
         .on_press(Message::Navigate(Screen::Settings));
 
-    row![
-        container(
-            column![
-                button("Taskforge")
-                    .style(button::text)
-                    .on_press(Message::OpenWebsite),
-                processes,
-                // charts,
-                space::vertical(),
-                settings,
-            ]
-            .width(Fill)
-            .spacing(12),
-        )
-        .width(199)
+        let collapse_expand = icon_button(if expanded {
+            lucide::arrow_left_to_line()
+        } else {
+            lucide::arrow_right_from_line()
+        })
+        .width(BUTTON_SIZE)
+        .height(BUTTON_SIZE)
+        .on_press(if expanded {
+            Message::Collapse
+        } else {
+            Message::Expand
+        });
+
+        row![
+            container(
+                column![
+                    processes,
+                    charts,
+                    space::vertical(),
+                    collapse_expand,
+                    settings,
+                ]
+                .width(Fill)
+                .spacing(12),
+            )
+            .width(width)
+            .height(Fill)
+            .padding(PADDING),
+            rule::vertical(1),
+        ]
         .height(Fill)
-        .padding(16),
-        rule::vertical(1),
-    ]
-    .width(200)
-    .height(Fill)
-    .into()
+        .into()
+    }
+
+    pub fn subscription(&self) -> Subscription<Message> {
+        if self.expanded.is_animating(self.now) {
+            iced::window::frames().map(Message::Frame)
+        } else {
+            Subscription::none()
+        }
+    }
+}
+
+impl Default for Sidebar {
+    fn default() -> Self {
+        Self {
+            expanded: Animation::new(Default::default()),
+            now: Instant::now(),
+        }
+    }
 }

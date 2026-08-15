@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use sysinfo::{
     CpuRefreshKind, Disks, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System,
-    ThreadKind,
+    ThreadKind, UpdateKind, Users,
 };
 
 use crate::{
@@ -15,6 +15,7 @@ use crate::{
 pub struct SystemMonitor {
     system: System,
     disks: Disks,
+    users: Users,
 }
 
 #[derive(Debug, Clone)]
@@ -35,11 +36,16 @@ pub struct ProcessSnapshot {
     pub cpu_usage: f32,
     pub memory: Memory,
     pub thread_kind: Option<ThreadKind>,
+    pub username: Option<String>,
 }
 
 impl SystemMonitor {
-    pub fn new(system: System, disks: Disks) -> Self {
-        Self { system, disks }
+    pub fn new(system: System, disks: Disks, users: Users) -> Self {
+        Self {
+            system,
+            disks,
+            users,
+        }
     }
 
     pub fn snapshot(&self) -> SystemSnapshot {
@@ -58,6 +64,13 @@ impl SystemMonitor {
                             cpu_usage: proc.cpu_usage(),
                             memory: Memory::from_bytes(proc.memory()),
                             thread_kind: proc.thread_kind(),
+                            username: proc.effective_user_id().map(|id| {
+                                self.users
+                                    .get_user_by_id(id)
+                                    .expect("User not found")
+                                    .name()
+                                    .to_string()
+                            }),
                         },
                     )
                 })
@@ -86,6 +99,7 @@ impl SystemMonitor {
     pub fn refresh(&mut self) {
         self.system.refresh_specifics(Self::refresh_kind());
         self.disks.refresh(true);
+        self.users.refresh();
     }
 
     pub fn kill_process(&mut self, pid: Pid) -> bool {
@@ -98,6 +112,7 @@ impl SystemMonitor {
                 ProcessRefreshKind::nothing()
                     .with_cpu()
                     .with_memory()
+                    .with_user(UpdateKind::Always)
                     .without_tasks(),
             )
             .with_cpu(CpuRefreshKind::everything())
@@ -109,6 +124,7 @@ impl Default for SystemMonitor {
     fn default() -> Self {
         let system = System::new_with_specifics(Self::refresh_kind());
         let disks = Disks::new_with_refreshed_list();
-        Self::new(system, disks)
+        let users = Users::new_with_refreshed_list();
+        Self::new(system, disks, users)
     }
 }

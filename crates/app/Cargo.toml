@@ -12,7 +12,7 @@ iced = { workspace = true, features = ["tokio"] }
 iced_aw.workspace = true
 iced_fonts = { workspace = true, features = ["advanced_text", "lucide"] }
 open.workspace = true
-plotters.workspace = true
+plotters = { workspace = true, features = ["area_series", "line_series"] }
 plotters-iced.workspace = true
 serde.workspace = true
 sysinfo.workspace = true
@@ -20,3 +20,6 @@ system = { path = "../system" }
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[dev-dependencies]
+plotters = { workspace = true, features = ["bitmap_backend"] }

@@ -52,7 +52,6 @@ pub fn disk_chart<'a, Message: 'a>(
 struct ChartColors {
     series: RGBColor,
     grid: RGBColor,
-    label: RGBColor,
 }
 
 #[derive(Clone, Copy)]
@@ -60,7 +59,6 @@ struct DiskChartColors {
     read: RGBColor,
     written: RGBColor,
     grid: RGBColor,
-    label: RGBColor,
 }
 
 impl DiskChartColors {
@@ -72,7 +70,6 @@ impl DiskChartColors {
             read: rgb(palette.primary),
             written: rgb(palette.warning),
             grid: text,
-            label: text,
         }
     }
 }
@@ -92,7 +89,6 @@ impl ChartColors {
         Self {
             series: rgb(series),
             grid: text,
-            label: text,
         }
     }
 }
@@ -114,7 +110,7 @@ impl<Message> Chart<Message> for CpuChart<'_> {
         let Ok(mut chart) = builder
             .margin(12)
             .x_label_area_size(0)
-            .y_label_area_size(42)
+            .y_label_area_size(0)
             .build_cartesian_2d(0..HISTORY_END, 0.0_f32..100.0_f32)
         else {
             return;
@@ -122,14 +118,10 @@ impl<Message> Chart<Message> for CpuChart<'_> {
 
         let _ = chart
             .configure_mesh()
-            .disable_x_axis()
+            .disable_axes()
             .disable_x_mesh()
-            .y_labels(5)
-            .y_label_formatter(&|value| format!("{value:.0}%"))
             .light_line_style(self.colors.grid.mix(0.1))
             .bold_line_style(self.colors.grid.mix(0.25))
-            .axis_style(self.colors.grid.mix(0.5))
-            .label_style(("sans-serif", 12).into_font().color(&self.colors.label))
             .draw();
 
         let offset = HISTORY_END - self.history.len() as i32;
@@ -159,7 +151,7 @@ impl<Message> Chart<Message> for MemoryChart<'_> {
         let Ok(mut chart) = builder
             .margin(12)
             .x_label_area_size(0)
-            .y_label_area_size(54)
+            .y_label_area_size(0)
             .build_cartesian_2d(0..HISTORY_END, 0.0_f64..self.total_memory.as_gib_f64())
         else {
             return;
@@ -167,14 +159,10 @@ impl<Message> Chart<Message> for MemoryChart<'_> {
 
         let _ = chart
             .configure_mesh()
-            .disable_x_axis()
+            .disable_axes()
             .disable_x_mesh()
-            .y_labels(5)
-            .y_label_formatter(&|value| format!("{value:.1} GiB"))
             .light_line_style(self.colors.grid.mix(0.1))
             .bold_line_style(self.colors.grid.mix(0.25))
-            .axis_style(self.colors.grid.mix(0.5))
-            .label_style(("sans-serif", 12).into_font().color(&self.colors.label))
             .draw();
 
         let offset = HISTORY_END - self.history.len() as i32;
@@ -210,7 +198,7 @@ impl<Message> Chart<Message> for DiskChart<'_> {
         let Ok(mut chart) = builder
             .margin(12)
             .x_label_area_size(0)
-            .y_label_area_size(64)
+            .y_label_area_size(0)
             .build_cartesian_2d(0..HISTORY_END, 0.0_f64..upper_bound)
         else {
             return;
@@ -218,14 +206,10 @@ impl<Message> Chart<Message> for DiskChart<'_> {
 
         let _ = chart
             .configure_mesh()
-            .disable_x_axis()
+            .disable_axes()
             .disable_x_mesh()
-            .y_labels(5)
-            .y_label_formatter(&|bytes| format_bytes(*bytes))
             .light_line_style(self.colors.grid.mix(0.1))
             .bold_line_style(self.colors.grid.mix(0.25))
-            .axis_style(self.colors.grid.mix(0.5))
-            .label_style(("sans-serif", 12).into_font().color(&self.colors.label))
             .draw();
 
         let offset = HISTORY_END - self.history.len() as i32;
@@ -251,22 +235,6 @@ impl<Message> Chart<Message> for DiskChart<'_> {
     }
 }
 
-fn format_bytes(bytes: f64) -> String {
-    const KIB: f64 = 1024.0;
-    const MIB: f64 = KIB * 1024.0;
-    const GIB: f64 = MIB * 1024.0;
-
-    if bytes >= GIB {
-        format!("{:.1} GiB", bytes / GIB)
-    } else if bytes >= MIB {
-        format!("{:.1} MiB", bytes / MIB)
-    } else if bytes >= KIB {
-        format!("{:.1} KiB", bytes / KIB)
-    } else {
-        format!("{bytes:.0} B")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use plotters::prelude::{BitMapBackend, ChartBuilder, IntoDrawingArea};
@@ -279,7 +247,7 @@ mod tests {
     use crate::state::history::History;
 
     #[test]
-    fn charts_render_without_x_axis_labels() {
+    fn charts_render_without_axes() {
         let cpu_history = History::new();
         let memory_history = History::new();
         let mut disk_history = History::new();

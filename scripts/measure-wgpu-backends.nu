@@ -13,25 +13,70 @@ def read-memory [pid: int] {
         open --raw $smaps
         | decode utf-8
         | lines
-        | parse --regex '^(?<key>Rss|Pss|Private_Clean|Private_Dirty|Private_Hugetlb):\s+(?<value>\d+)\s+kB$'
+        | parse --regex '^(?<key>Rss|Pss|Pss_Anon|Pss_File|Pss_Shmem|Private_Clean|Private_Dirty|Private_Hugetlb|Swap):\s+(?<value>\d+)\s+kB$'
         | update value {|row| $row.value | into int }
     )
 
     let kib = {|key|
-        $memory
-        | where key == $key
-        | get 0.value
+        let matches = $memory | where key == $key
+
+        if ($matches | is-empty) {
+            0
+        } else {
+            $matches | get 0.value
+        }
     }
 
     {
         rss_mib: ((do $kib Rss) / 1024.0)
         pss_mib: ((do $kib Pss) / 1024.0)
+        pss_anon_mib: ((do $kib Pss_Anon) / 1024.0)
+        pss_file_mib: ((do $kib Pss_File) / 1024.0)
+        pss_shmem_mib: ((do $kib Pss_Shmem) / 1024.0)
+        private_clean_mib: ((do $kib Private_Clean) / 1024.0)
+        private_dirty_mib: ((do $kib Private_Dirty) / 1024.0)
         private_mib: (
             ((do $kib Private_Clean)
                 + (do $kib Private_Dirty)
                 + (do $kib Private_Hugetlb)) / 1024.0
         )
+        swap_mib: ((do $kib Swap) / 1024.0)
     }
+}
+
+def summarize-results [results: table] {
+    let metrics = [
+        {name: rss, column: rss_mib}
+        {name: pss, column: pss_mib}
+        {name: pss_anon, column: pss_anon_mib}
+        {name: pss_file, column: pss_file_mib}
+        {name: pss_shmem, column: pss_shmem_mib}
+        {name: private, column: private_mib}
+        {name: private_clean, column: private_clean_mib}
+        {name: private_dirty, column: private_dirty_mib}
+        {name: swap, column: swap_mib}
+    ]
+
+    $results
+    | group-by backend
+    | transpose backend samples
+    | each {|group|
+        $metrics | each {|metric|
+            let values = $group.samples | get $metric.column
+
+            {
+                backend: $group.backend
+                metric: $metric.name
+                runs: ($values | length)
+                mean_mib: ($values | math avg | math round --precision 2)
+                median_mib: ($values | math median | math round --precision 2)
+                min_mib: ($values | math min | math round --precision 2)
+                max_mib: ($values | math max | math round --precision 2)
+                stddev_mib: ($values | math stddev | math round --precision 2)
+            }
+        }
+    }
+    | flatten
 }
 
 def stop-process [pid: int] {
@@ -79,7 +124,7 @@ def main [
     }
 
     let backends = [
-        {name: default, environment: "", runs: 1}
+        {name: default, environment: "", runs: $runs}
         {name: vulkan, environment: vulkan, runs: $runs}
         {name: gl, environment: gl, runs: $runs}
     ]
@@ -109,12 +154,10 @@ def main [
             $results = $results | append {
                 backend: $backend.name
                 run: $run
-                rss_mib: ($sample.rss_mib | math round --precision 2)
-                pss_mib: ($sample.pss_mib | math round --precision 2)
-                private_mib: ($sample.private_mib | math round --precision 2)
+                ...$sample
             }
         }
     }
 
-    $results | table --index false
+    summarize-results $results | table --index false
 }

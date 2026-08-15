@@ -188,6 +188,7 @@ impl App {
         Subscription::batch([
             iced::time::every(POLL_INTERVAL).map(|_| Message::PollRequested),
             self.sidebar.subscription().map(Message::Sidebar),
+            self.processes.subscription().map(Message::Processes),
         ])
     }
 }

@@ -159,24 +159,9 @@ impl ProcessesScreen {
             ordering.then_with(|| left.pid.cmp(&right.pid))
         });
 
-        let header_label = |label, column| {
-            let mut content = row![text(label)].spacing(4).align_y(Center);
-
-            if self.sort_column == column {
-                let icon = match self.sort_direction {
-                    SortDirection::Ascending => lucide::arrow_up_narrow_wide(),
-                    SortDirection::Descending => lucide::arrow_down_wide_narrow(),
-                };
-
-                content = content.push(icon.size(16));
-            }
-
-            content
-        };
-
         let mut stack = stack![column![
             row![
-                button(header_label("Name", SortColumn::Name))
+                button(self.header_label("Name", SortColumn::Name))
                     .width(Fill)
                     .style(if self.sort_column == SortColumn::Name {
                         button::primary
@@ -186,7 +171,7 @@ impl ProcessesScreen {
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Name)),
                 rule::vertical(1),
-                button(header_label("CPU", SortColumn::Cpu))
+                button(self.header_label("CPU", SortColumn::Cpu))
                     .width(CPU_COLUMN_WIDTH)
                     .style(if self.sort_column == SortColumn::Cpu {
                         button::primary
@@ -196,7 +181,7 @@ impl ProcessesScreen {
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Cpu)),
                 rule::vertical(1),
-                button(header_label("Memory", SortColumn::Memory))
+                button(self.header_label("Memory", SortColumn::Memory))
                     .width(MEMORY_COLUMN_WIDTH)
                     .style(if self.sort_column == SortColumn::Memory {
                         button::primary
@@ -206,7 +191,7 @@ impl ProcessesScreen {
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Memory)),
                 rule::vertical(1),
-                button(header_label("Username", SortColumn::Username))
+                button(self.header_label("Username", SortColumn::Username))
                     .width(USERNAME_COLUMN_WIDTH)
                     .style(if self.sort_column == SortColumn::Username {
                         button::primary
@@ -350,6 +335,21 @@ impl ProcessesScreen {
         .align_y(Center)
         .spacing(8)
         .into()
+    }
+
+    fn header_label(&self, label: &'static str, column: SortColumn) -> Element<'_, Message> {
+        let mut content = row![text(label)].spacing(4).align_y(Center);
+
+        if self.sort_column == column {
+            let icon = match self.sort_direction {
+                SortDirection::Ascending => lucide::arrow_up_narrow_wide(),
+                SortDirection::Descending => lucide::arrow_down_wide_narrow(),
+            };
+
+            content = content.push(icon.size(16));
+        }
+
+        content.into()
     }
 }
 

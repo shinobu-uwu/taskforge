@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use iced::{
-    Element, Fill, Subscription, Task,
+    Element, Fill, Font, Subscription, Task,
     widget::{column, container, row, space, text},
 };
 use system::memory::Memory;
@@ -199,7 +199,11 @@ impl App {
                 Screen::Charts => "Charts",
                 Screen::Settings => "Settings",
             })
-            .size(32),
+            .size(24)
+            .font(Font {
+                weight: iced::font::Weight::Medium,
+                ..Default::default()
+            })
         ]
         .padding(8)
         .width(Fill);

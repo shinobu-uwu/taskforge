@@ -21,9 +21,9 @@ use crate::widgets::{
 };
 
 const CPU_COLUMN_WIDTH: u32 = 100;
-const PID_COLUMN_WIDTH: u32 = 80;
-const MEMORY_COLUMN_WIDTH: u32 = 120;
-const USERNAME_COLUMN_WIDTH: u32 = 200;
+const MEMORY_COLUMN_WIDTH: u32 = 200;
+const USERNAME_COLUMN_WIDTH: u32 = 180;
+const HEADER_PADDING: f32 = 8.0;
 
 #[derive(Debug)]
 pub struct ProcessesScreen {
@@ -159,36 +159,61 @@ impl ProcessesScreen {
             ordering.then_with(|| left.pid.cmp(&right.pid))
         });
 
+        let header_label = |label, column| {
+            let mut content = row![text(label)].spacing(4).align_y(Center);
+
+            if self.sort_column == column {
+                let icon = match self.sort_direction {
+                    SortDirection::Ascending => lucide::arrow_up_narrow_wide(),
+                    SortDirection::Descending => lucide::arrow_down_wide_narrow(),
+                };
+
+                content = content.push(icon.size(16));
+            }
+
+            content
+        };
+
         let mut stack = stack![column![
             row![
-                button("PID")
-                    .width(PID_COLUMN_WIDTH)
-                    .style(button::text)
-                    .padding(8)
-                    .on_press(Message::SortBy(SortColumn::Pid)),
-                rule::vertical(1),
-                button("Name")
+                button(header_label("Name", SortColumn::Name))
                     .width(Fill)
-                    .style(button::text)
-                    .padding(8)
+                    .style(if self.sort_column == SortColumn::Name {
+                        button::primary
+                    } else {
+                        button::text
+                    })
+                    .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Name)),
                 rule::vertical(1),
-                button("CPU")
+                button(header_label("CPU", SortColumn::Cpu))
                     .width(CPU_COLUMN_WIDTH)
-                    .style(button::text)
-                    .padding(8)
+                    .style(if self.sort_column == SortColumn::Cpu {
+                        button::primary
+                    } else {
+                        button::text
+                    })
+                    .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Cpu)),
                 rule::vertical(1),
-                button("Memory")
+                button(header_label("Memory", SortColumn::Memory))
                     .width(MEMORY_COLUMN_WIDTH)
-                    .style(button::text)
-                    .padding(8)
+                    .style(if self.sort_column == SortColumn::Memory {
+                        button::primary
+                    } else {
+                        button::text
+                    })
+                    .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Memory)),
                 rule::vertical(1),
-                button("Username")
+                button(header_label("Username", SortColumn::Username))
                     .width(USERNAME_COLUMN_WIDTH)
-                    .style(button::text)
-                    .padding(8)
+                    .style(if self.sort_column == SortColumn::Username {
+                        button::primary
+                    } else {
+                        button::text
+                    })
+                    .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Username)),
             ]
             .height(Shrink)
@@ -201,9 +226,6 @@ impl ProcessesScreen {
                 column![
                     button(
                         row![
-                            container(text(pid.to_string()))
-                                .width(PID_COLUMN_WIDTH)
-                                .padding(8),
                             container(text(process.name.clone())).width(Fill).padding(8),
                             container(text(format!("{:.2}%", process.cpu_usage)))
                                 .width(CPU_COLUMN_WIDTH)

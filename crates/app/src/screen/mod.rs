@@ -1,3 +1,3 @@
-pub(super) mod charts;
-pub(super) mod process;
-pub(super) mod settings;
+pub mod charts;
+pub mod processes;
+pub mod settings;

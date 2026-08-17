@@ -12,7 +12,7 @@ use crate::{
     config::Config,
     screen::{
         charts::{self, ChartsScreen},
-        process::{self, ProcessScreen},
+        processes::{self, ProcessesScreen},
         settings::{self, SettingsScreen},
     },
     state::history::{DiskHistory, History},
@@ -33,7 +33,7 @@ pub struct App {
     memory_history: History<Memory>,
     disks_history: Vec<DiskHistory>,
     current_screen: Screen,
-    processes: ProcessScreen,
+    processes: ProcessesScreen,
     settings: SettingsScreen,
     charts: ChartsScreen,
     sidebar: Sidebar,
@@ -51,7 +51,7 @@ pub enum Screen {
 pub enum Message {
     Sidebar(sidebar::Message),
     Footer(footer::Message),
-    Processes(process::Message),
+    Processes(processes::Message),
     Charts(charts::Message),
     Settings(settings::Message),
     PollRequested,
@@ -77,7 +77,7 @@ impl App {
             disks_history: Vec::new(),
             snapshot,
             current_screen: Screen::default(),
-            processes: ProcessScreen::default(),
+            processes: ProcessesScreen::default(),
             charts: ChartsScreen::default(),
             settings: SettingsScreen,
             config,
@@ -93,8 +93,8 @@ impl App {
             Message::Sidebar(m) => self.sidebar.update(m),
             Message::Footer(m) => footer::update(m),
             Message::Processes(message) => match self.processes.update(message) {
-                process::Action::None => {}
-                process::Action::KillProcess(pid) => {
+                processes::Action::None => {}
+                processes::Action::KillProcess(pid) => {
                     if let Some(monitor) = self.monitor.as_mut() {
                         monitor.kill_process(pid);
                         monitor.refresh();

@@ -26,7 +26,7 @@ const MEMORY_COLUMN_WIDTH: u32 = 120;
 const USERNAME_COLUMN_WIDTH: u32 = 200;
 
 #[derive(Debug)]
-pub struct ProcessScreen {
+pub struct ProcessesScreen {
     search_query: String,
     selected_process: Option<Pid>,
     pid_to_kill: Option<Pid>,
@@ -69,7 +69,7 @@ pub enum Action {
     KillProcess(Pid),
 }
 
-impl ProcessScreen {
+impl ProcessesScreen {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::SearchChanged(query) => {
@@ -334,7 +334,7 @@ fn compare_ignore_ascii_case(left: &str, right: &str) -> Ordering {
         .cmp(right.bytes().map(|byte| byte.to_ascii_lowercase()))
 }
 
-impl Default for ProcessScreen {
+impl Default for ProcessesScreen {
     fn default() -> Self {
         Self {
             search_query: String::new(),

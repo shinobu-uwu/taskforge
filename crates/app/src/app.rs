@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use iced::{
     Element, Fill, Subscription, Task,
-    widget::{column, container, row},
+    widget::{column, container, row, space, text},
 };
 use system::memory::Memory;
 use system::monitor::{SystemMonitor, SystemSnapshot};
@@ -17,7 +17,7 @@ use crate::{
     },
     state::history::{DiskHistory, History},
     widgets::{
-        footer,
+        shell,
         sidebar::{self, Sidebar},
     },
 };
@@ -50,7 +50,6 @@ pub enum Screen {
 #[derive(Debug)]
 pub enum Message {
     Sidebar(sidebar::Message),
-    Footer(footer::Message),
     Processes(processes::Message),
     Charts(charts::Message),
     Settings(settings::Message),
@@ -91,7 +90,6 @@ impl App {
                 self.current_screen = screen;
             }
             Message::Sidebar(m) => self.sidebar.update(m),
-            Message::Footer(m) => footer::update(m),
             Message::Processes(message) => match self.processes.update(message) {
                 processes::Action::None => {}
                 processes::Action::KillProcess(pid) => {
@@ -149,13 +147,6 @@ impl App {
     pub fn view(&self) -> Element<'_, Message> {
         let theme = iced::Theme::from(self.config.theme.clone());
         let sidebar = self.sidebar.view(self.current_screen).map(Message::Sidebar);
-        let footer = footer::view(
-            self.snapshot.processes.len(),
-            self.snapshot.uptime,
-            self.snapshot.memory_usage,
-            self.snapshot.total_memory,
-        )
-        .map(Message::Footer);
 
         let screen = match self.current_screen {
             Screen::Processes => self.processes.view(&self.snapshot).map(Message::Processes),
@@ -175,12 +166,21 @@ impl App {
                 .map(Message::Settings),
         };
 
-        column![
-            row![sidebar, container(screen).width(Fill).height(Fill)],
-            footer
-        ]
+        container(row![
+            sidebar,
+            column![
+                self.header(),
+                container(screen)
+                    .width(Fill)
+                    .height(Fill)
+                    .style(shell::content)
+            ]
+            .width(Fill)
+            .height(Fill)
+        ])
         .width(Fill)
         .height(Fill)
+        .style(shell::background)
         .into()
     }
 
@@ -190,5 +190,25 @@ impl App {
             self.sidebar.subscription().map(Message::Sidebar),
             self.processes.subscription().map(Message::Processes),
         ])
+    }
+
+    fn header(&self) -> Element<'_, Message> {
+        let mut header = row![
+            text(match self.current_screen {
+                Screen::Processes => "Processes",
+                Screen::Charts => "Charts",
+                Screen::Settings => "Settings",
+            })
+            .size(32),
+        ]
+        .padding(8)
+        .width(Fill);
+
+        if self.current_screen == Screen::Processes {
+            header = header.push(space::horizontal());
+            header = header.push(self.processes.header_actions().map(Message::Processes));
+        }
+
+        header.into()
     }
 }

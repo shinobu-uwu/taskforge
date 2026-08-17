@@ -161,23 +161,6 @@ impl ProcessesScreen {
 
         let mut stack = stack![column![
             row![
-                text("Processes").size(32),
-                space::horizontal(),
-                text_input("Search processes...", &self.search_query)
-                    .icon(search().into_text_input_icon())
-                    .style(crate::widgets::text_input::primary)
-                    .on_input(Message::SearchChanged)
-                    .width(240),
-                button("Kill")
-                    .style(rounded(button::primary))
-                    .on_press_maybe(self.selected_process.map(Message::ShowDialog))
-            ]
-            .width(Fill)
-            .align_y(Center)
-            .spacing(8)
-            .padding(8),
-            rule::horizontal(1),
-            row![
                 button("PID")
                     .width(PID_COLUMN_WIDTH)
                     .style(button::text)
@@ -325,6 +308,26 @@ impl ProcessesScreen {
         } else {
             Subscription::none()
         }
+    }
+
+    pub fn header_actions(&self) -> Element<'_, Message> {
+        row![
+            text_input("Search processes...", &self.search_query)
+                .width(240)
+                .on_input(Message::SearchChanged)
+                .icon(search().into_text_input_icon())
+                .style(crate::widgets::text_input::primary),
+            button(
+                row![lucide::x().size(16), text("Kill")]
+                    .align_y(Center)
+                    .spacing(4)
+            )
+            .on_press_maybe(self.selected_process.map(Message::ShowDialog))
+            .style(rounded(button::primary))
+        ]
+        .align_y(Center)
+        .spacing(8)
+        .into()
     }
 }
 

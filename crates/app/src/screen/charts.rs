@@ -1,7 +1,6 @@
 use iced::{
-    Alignment::Center,
     Element, Fill, Theme,
-    widget::{button, column, container, grid, rule, text},
+    widget::{button, column, container, grid},
 };
 
 use crate::{
@@ -69,17 +68,10 @@ impl ChartsScreen {
             );
         }
 
-        column![
-            container(text("Performance").size(32))
-                .width(Fill)
-                .align_y(Center)
-                .padding(8),
-            rule::horizontal(1),
-            container(charts.columns(2).spacing(12).height(Fill))
-                .padding(16)
-                .width(Fill)
-                .height(Fill)
-        ]
-        .into()
+        container(charts.columns(2).spacing(12).height(Fill))
+            .padding(16)
+            .width(Fill)
+            .height(Fill)
+            .into()
     }
 }

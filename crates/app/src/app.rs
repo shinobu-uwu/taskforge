@@ -173,6 +173,7 @@ impl App {
                 container(screen)
                     .width(Fill)
                     .height(Fill)
+                    .clip(true)
                     .style(shell::content)
             ]
             .width(Fill)
@@ -201,7 +202,7 @@ impl App {
             })
             .size(24)
             .font(Font {
-                weight: iced::font::Weight::Medium,
+                weight: iced::font::Weight::Semibold,
                 ..Default::default()
             })
         ]

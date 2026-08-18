@@ -1,5 +1,7 @@
 use iced::{Theme, border, theme::palette, widget::container};
 
+pub const SHELL_BORDER_RADIUS: f32 = 8.0;
+
 pub fn background(theme: &Theme) -> container::Style {
     let color = palette::darken(theme.palette().background, 0.05);
 
@@ -12,5 +14,5 @@ pub fn content(theme: &Theme) -> container::Style {
     container::Style::default()
         .background(theme.palette().background)
         .color(theme.palette().text)
-        .border(border::rounded(border::top_left(16)))
+        .border(border::rounded(border::top_left(SHELL_BORDER_RADIUS)))
 }

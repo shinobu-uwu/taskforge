@@ -1,7 +1,8 @@
 use std::{cmp::Ordering, time::Instant};
 
+use iced::theme::palette::lighten;
 use iced::{
-    Animation, Center, Element, Fill,
+    Animation, Background, Center, Element, Fill,
     Length::Shrink,
     Subscription, Theme,
     animation::Easing,
@@ -12,8 +13,9 @@ use iced::{
 };
 use iced_fonts::lucide::{self, advanced_text::search};
 use sysinfo::Pid;
-use system::monitor::SystemSnapshot;
+use system::monitor::{ProcessSnapshot, SystemSnapshot};
 
+use crate::widgets::shell::SHELL_BORDER_RADIUS;
 use crate::widgets::{
     button::{icon_button, rounded, rounded_full},
     fade,
@@ -163,41 +165,25 @@ impl ProcessesScreen {
             row![
                 button(self.header_label("Name", SortColumn::Name))
                     .width(Fill)
-                    .style(if self.sort_column == SortColumn::Name {
-                        button::primary
-                    } else {
-                        button::text
-                    })
+                    .style(|theme, status| self.header_button(theme, status, SortColumn::Name))
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Name)),
                 rule::vertical(1),
                 button(self.header_label("CPU", SortColumn::Cpu))
                     .width(CPU_COLUMN_WIDTH)
-                    .style(if self.sort_column == SortColumn::Cpu {
-                        button::primary
-                    } else {
-                        button::text
-                    })
+                    .style(|theme, status| self.header_button(theme, status, SortColumn::Cpu))
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Cpu)),
                 rule::vertical(1),
                 button(self.header_label("Memory", SortColumn::Memory))
                     .width(MEMORY_COLUMN_WIDTH)
-                    .style(if self.sort_column == SortColumn::Memory {
-                        button::primary
-                    } else {
-                        button::text
-                    })
+                    .style(|theme, status| self.header_button(theme, status, SortColumn::Memory))
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Memory)),
                 rule::vertical(1),
                 button(self.header_label("Username", SortColumn::Username))
                     .width(USERNAME_COLUMN_WIDTH)
-                    .style(if self.sort_column == SortColumn::Username {
-                        button::primary
-                    } else {
-                        button::text
-                    })
+                    .style(|theme, status| self.header_button(theme, status, SortColumn::Username))
                     .padding(HEADER_PADDING)
                     .on_press(Message::SortBy(SortColumn::Username)),
             ]
@@ -206,39 +192,7 @@ impl ProcessesScreen {
             rule::horizontal(1),
             scrollable(column(pids.into_iter().map(|pid| {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
-                let is_selected = self.selected_process == Some(pid);
-
-                column![
-                    button(
-                        row![
-                            container(text(process.name.clone())).width(Fill).padding(8),
-                            container(text(format!("{:.2}%", process.cpu_usage)))
-                                .width(CPU_COLUMN_WIDTH)
-                                .padding(8),
-                            container(text(format!("{:.2}MiB", process.memory.as_mib_f64())))
-                                .width(MEMORY_COLUMN_WIDTH)
-                                .padding(8),
-                            container(text(
-                                process.username.clone().unwrap_or("unknown".to_string())
-                            ))
-                            .width(USERNAME_COLUMN_WIDTH)
-                            .padding(8),
-                        ]
-                        .padding([8, 0])
-                        .align_y(Center)
-                        .width(Fill)
-                    )
-                    .padding(0)
-                    .width(Fill)
-                    .style(if is_selected {
-                        button::primary
-                    } else {
-                        button::text
-                    })
-                    .on_press(Message::ProcessSelected(pid)),
-                    rule::horizontal(1)
-                ]
-                .into()
+                self.process_row(process).into()
             })))
             .width(Fill)
             .height(Fill)
@@ -350,6 +304,61 @@ impl ProcessesScreen {
         }
 
         content.into()
+    }
+
+    fn header_button(
+        &self,
+        theme: &Theme,
+        status: button::Status,
+        column: SortColumn,
+    ) -> button::Style {
+        let mut base = button::text(theme, status);
+
+        if column == SortColumn::Name {
+            base.border = border::rounded(border::top_left(SHELL_BORDER_RADIUS));
+        }
+
+        if self.sort_column == column {
+            let palette = theme.palette();
+            return base.with_background(Background::Color(lighten(palette.background, 0.05)));
+        }
+
+        base
+    }
+
+    fn process_row(&self, process: &ProcessSnapshot) -> Element<'_, Message> {
+        let is_selected = self.selected_process == Some(process.pid);
+        let row = row![
+            container(text(process.name.clone())).width(Fill).padding(8),
+            container(text(format!("{:.2}%", process.cpu_usage)))
+                .width(CPU_COLUMN_WIDTH)
+                .padding(8),
+            container(text(format!("{:.2}MB", process.memory.as_mib_f64())))
+                .width(MEMORY_COLUMN_WIDTH)
+                .padding(8),
+            container(text(
+                process.username.clone().unwrap_or("unknown".to_owned())
+            ))
+            .width(USERNAME_COLUMN_WIDTH)
+            .padding(8),
+        ]
+        .padding([8, 0])
+        .align_y(Center)
+        .width(Fill);
+
+        column![
+            button(row)
+                .padding(0)
+                .width(Fill)
+                .style(if is_selected {
+                    button::primary
+                } else {
+                    button::text
+                })
+                .on_press(Message::ProcessSelected(process.pid)),
+            rule::horizontal(1)
+        ]
+        .into()
     }
 }
 

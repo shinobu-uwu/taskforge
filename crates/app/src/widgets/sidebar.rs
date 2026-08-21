@@ -26,8 +26,6 @@ pub struct Sidebar {
 #[derive(Debug, Clone)]
 pub enum Message {
     Navigate(Screen),
-    Expand,
-    Collapse,
     Frame(Instant),
 }
 
@@ -41,15 +39,14 @@ impl Sidebar {
     pub fn update(&mut self, message: Message) {
         match message {
             Message::Navigate(_) => {} // handled by app
-            Message::Expand => {
-                self.now = Instant::now();
-                self.expanded.go_mut(true, self.now);
-            }
-            Message::Collapse => {
-                self.now = Instant::now();
-                self.expanded.go_mut(false, self.now);
-            }
             Message::Frame(i) => self.now = i,
+        }
+    }
+
+    pub fn set_expanded(&mut self, expanded: bool) {
+        if self.expanded.value() != expanded {
+            self.now = Instant::now();
+            self.expanded.go_mut(expanded, self.now);
         }
     }
 
@@ -116,29 +113,10 @@ impl Sidebar {
         }))
         .on_press(Message::Navigate(Screen::Settings));
 
-        let collapse_expand = icon_button(if expanded {
-            lucide::arrow_left_to_line()
-        } else {
-            lucide::arrow_right_from_line()
-        })
-        .width(BUTTON_SIZE)
-        .height(BUTTON_SIZE)
-        .on_press(if expanded {
-            Message::Collapse
-        } else {
-            Message::Expand
-        });
-
         container(
-            column![
-                processes,
-                charts,
-                space::vertical(),
-                collapse_expand,
-                settings,
-            ]
-            .width(Fill)
-            .spacing(12),
+            column![processes, charts, space::vertical(), settings,]
+                .width(Fill)
+                .spacing(12),
         )
         .width(width)
         .height(Fill)

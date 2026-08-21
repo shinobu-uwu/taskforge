@@ -102,10 +102,11 @@ impl App {
                 }
             },
             Message::Charts(message) => self.charts.update(message),
-            Message::Settings(settings::Message::ThemeChange(t)) => {
-                self.config.theme = t;
+            Message::Settings(settings::Message::ConfigChanged(config)) => {
+                self.sidebar.set_expanded(config.expanded_sidebar);
+                self.config = config;
                 confy::store("taskforge", None, self.config.clone())
-                    .unwrap_or_else(|e| error!("Failed to load config: {:#?}", e));
+                    .unwrap_or_else(|e| error!("Failed to save config: {:#?}", e));
             }
             Message::PollRequested => {
                 let Some(mut monitor) = self.monitor.take() else {
@@ -161,10 +162,7 @@ impl App {
                     &theme,
                 )
                 .map(Message::Charts),
-            Screen::Settings => self
-                .settings
-                .view(&self.config.theme)
-                .map(Message::Settings),
+            Screen::Settings => self.settings.view(&self.config).map(Message::Settings),
         };
 
         container(row![

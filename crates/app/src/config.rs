@@ -2,6 +2,7 @@ use enum_iterator::Sequence;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Config {
     pub theme: Theme,
     pub expanded_sidebar: bool,

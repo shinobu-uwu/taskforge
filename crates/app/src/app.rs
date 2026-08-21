@@ -68,6 +68,7 @@ impl App {
             error!("Failed to load config, using default: {:#?}", e);
             Config::default()
         });
+        let expanded_sidebar = config.expanded_sidebar;
 
         Self {
             monitor: Some(Box::new(monitor)),
@@ -80,7 +81,7 @@ impl App {
             charts: ChartsScreen::default(),
             settings: SettingsScreen,
             config,
-            sidebar: Sidebar::default(),
+            sidebar: Sidebar::new(expanded_sidebar),
         }
     }
 
@@ -206,7 +207,7 @@ impl App {
                 ..Default::default()
             })
         ]
-        .padding(8)
+        .padding(16)
         .width(Fill);
 
         if self.current_screen == Screen::Processes {

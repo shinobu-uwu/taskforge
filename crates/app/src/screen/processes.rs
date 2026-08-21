@@ -1,6 +1,7 @@
 use std::{cmp::Ordering, time::Instant};
 
 use iced::theme::palette::lighten;
+use iced::widget::button::Status;
 use iced::{
     Animation, Background, Center, Element, Fill,
     Length::Shrink,
@@ -22,10 +23,10 @@ use crate::widgets::{
     icon::IntoTextInputIcon,
 };
 
-const CPU_COLUMN_WIDTH: u32 = 100;
+const CPU_COLUMN_WIDTH: u32 = 120;
 const MEMORY_COLUMN_WIDTH: u32 = 200;
-const USERNAME_COLUMN_WIDTH: u32 = 180;
-const HEADER_PADDING: f32 = 8.0;
+const USERNAME_COLUMN_WIDTH: u32 = 200;
+const HEADER_PADDING: f32 = 4.0;
 
 #[derive(Debug)]
 pub struct ProcessesScreen {
@@ -84,6 +85,7 @@ impl ProcessesScreen {
             }
             Message::KillProcess(pid) => {
                 self.pid_to_kill = None;
+                self.selected_process = None;
                 self.now = Instant::now();
                 self.dialog_visible.go_mut(false, self.now);
                 Action::KillProcess(pid)
@@ -192,7 +194,7 @@ impl ProcessesScreen {
             rule::horizontal(1),
             scrollable(column(pids.into_iter().map(|pid| {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
-                self.process_row(process).into()
+                self.process_row(process)
             })))
             .width(Fill)
             .height(Fill)
@@ -292,7 +294,8 @@ impl ProcessesScreen {
     }
 
     fn header_label(&self, label: &'static str, column: SortColumn) -> Element<'_, Message> {
-        let mut content = row![text(label)].spacing(4).align_y(Center);
+        const FONT_SIZE: f32 = 14.0;
+        let mut content = row![text(label).size(FONT_SIZE)].spacing(4).align_y(Center);
 
         if self.sort_column == column {
             let icon = match self.sort_direction {
@@ -327,38 +330,53 @@ impl ProcessesScreen {
     }
 
     fn process_row(&self, process: &ProcessSnapshot) -> Element<'_, Message> {
+        const FONT_SIZE: f32 = 14.0;
+        const CONTAINER_PADDING: [f32; 2] = [0.0, 8.0];
         let is_selected = self.selected_process == Some(process.pid);
         let row = row![
-            container(text(process.name.clone())).width(Fill).padding(8),
-            container(text(format!("{:.2}%", process.cpu_usage)))
-                .width(CPU_COLUMN_WIDTH)
-                .padding(8),
-            container(text(format!("{:.2}MB", process.memory.as_mib_f64())))
-                .width(MEMORY_COLUMN_WIDTH)
-                .padding(8),
-            container(text(
-                process.username.clone().unwrap_or("unknown".to_owned())
-            ))
-            .width(USERNAME_COLUMN_WIDTH)
-            .padding(8),
+            container(text(process.name.clone()).size(FONT_SIZE))
+                .padding(CONTAINER_PADDING)
+                .width(Fill),
+            container(text(format!("{:.2}%", process.cpu_usage)).size(FONT_SIZE))
+                .padding(CONTAINER_PADDING)
+                .width(CPU_COLUMN_WIDTH),
+            container(text(format!("{:.2}MB", process.memory.as_mib_f64())).size(FONT_SIZE))
+                .padding(CONTAINER_PADDING)
+                .width(MEMORY_COLUMN_WIDTH),
         ]
-        .padding([8, 0])
+        .padding([12, 0])
         .align_y(Center)
         .width(Fill);
 
-        column![
-            button(row)
-                .padding(0)
-                .width(Fill)
-                .style(if is_selected {
-                    button::primary
-                } else {
-                    button::text
-                })
-                .on_press(Message::ProcessSelected(process.pid)),
-            rule::horizontal(1)
-        ]
-        .into()
+        #[cfg(not(target_os = "windows"))]
+        let row = row.push(
+            container(text(process.username.clone().unwrap_or("-".to_owned())).size(FONT_SIZE))
+                .padding(CONTAINER_PADDING)
+                .width(USERNAME_COLUMN_WIDTH),
+        );
+
+        button(row)
+            .padding(0)
+            .width(Fill)
+            .style(if is_selected {
+                button::primary
+            } else {
+                process_row
+            })
+            .on_press(Message::ProcessSelected(process.pid))
+            .into()
+    }
+}
+
+fn process_row(theme: &Theme, status: Status) -> button::Style {
+    let palette = theme.extended_palette();
+    let base = button::text(theme, status);
+
+    match status {
+        Status::Active => base,
+        Status::Hovered => base.with_background(palette.background.stronger.color),
+        Status::Pressed => base.with_background(palette.background.weaker.color),
+        Status::Disabled => base,
     }
 }
 

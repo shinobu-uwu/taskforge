@@ -3,7 +3,7 @@ use iced::{Theme, border, theme::palette, widget::container};
 pub const SHELL_BORDER_RADIUS: f32 = 8.0;
 
 pub fn background(theme: &Theme) -> container::Style {
-    let color = palette::darken(theme.palette().background, 0.05);
+    let color = palette::darken(theme.palette().background, 0.1);
 
     container::Style::default()
         .background(color)

@@ -7,15 +7,15 @@ use iced::{
 use crate::config::Theme;
 
 #[derive(Debug, Default)]
-pub(crate) struct SettingsScreen;
+pub struct SettingsScreen;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Message {
+pub enum Message {
     ThemeChange(Theme),
 }
 
 impl SettingsScreen {
-    pub(crate) fn view(&self, current_theme: &Theme) -> Element<'_, Message> {
+    pub fn view(&self, current_theme: &Theme) -> Element<'_, Message> {
         column![
             text("Theme:"),
             scrollable(column(all::<Theme>().map(|t| {

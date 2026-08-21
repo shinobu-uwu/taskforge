@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub theme: Theme,
+    pub expanded_sidebar: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default, Sequence)]

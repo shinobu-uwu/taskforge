@@ -32,6 +32,12 @@ pub enum Message {
 }
 
 impl Sidebar {
+    pub fn new(expanded_sidebar: bool) -> Self {
+        Self {
+            expanded: Animation::new(expanded_sidebar),
+            now: Instant::now(),
+        }
+    }
     pub fn update(&mut self, message: Message) {
         match message {
             Message::Navigate(_) => {} // handled by app
@@ -145,15 +151,6 @@ impl Sidebar {
             iced::window::frames().map(Message::Frame)
         } else {
             Subscription::none()
-        }
-    }
-}
-
-impl Default for Sidebar {
-    fn default() -> Self {
-        Self {
-            expanded: Animation::new(Default::default()),
-            now: Instant::now(),
         }
     }
 }

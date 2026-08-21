@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use iced::{
     Element, Fill, Font, Subscription, Task,
     widget::{column, container, row, space, text},
@@ -21,8 +19,6 @@ use crate::{
         sidebar::{self, Sidebar},
     },
 };
-
-const POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 #[derive(Debug)]
 pub struct App {
@@ -102,10 +98,10 @@ impl App {
                 }
             },
             Message::Charts(message) => self.charts.update(message),
-            Message::Settings(settings::Message::ConfigChanged(config)) => {
-                self.sidebar.set_expanded(config.expanded_sidebar);
-                self.config = config;
-                confy::store("taskforge", None, self.config.clone())
+            Message::Settings(settings::Message::ConfigChanged(change)) => {
+                self.config.apply(change);
+                self.sidebar.set_expanded(self.config.expanded_sidebar);
+                confy::store("taskforge", None, &self.config)
                     .unwrap_or_else(|e| error!("Failed to save config: {:#?}", e));
             }
             Message::PollRequested => {
@@ -151,7 +147,10 @@ impl App {
         let sidebar = self.sidebar.view(self.current_screen).map(Message::Sidebar);
 
         let screen = match self.current_screen {
-            Screen::Processes => self.processes.view(&self.snapshot).map(Message::Processes),
+            Screen::Processes => self
+                .processes
+                .view(&self.snapshot, self.config.process_cpu_display_mode)
+                .map(Message::Processes),
             Screen::Charts => self
                 .charts
                 .view(
@@ -186,7 +185,7 @@ impl App {
 
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
-            iced::time::every(POLL_INTERVAL).map(|_| Message::PollRequested),
+            iced::time::every(self.config.refresh_rate.duration()).map(|_| Message::PollRequested),
             self.sidebar.subscription().map(Message::Sidebar),
             self.processes.subscription().map(Message::Processes),
         ])

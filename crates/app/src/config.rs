@@ -1,4 +1,5 @@
-use enum_iterator::Sequence;
+use std::{fmt, time::Duration};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -6,9 +7,83 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub theme: Theme,
     pub expanded_sidebar: bool,
+    pub process_cpu_display_mode: ProcessCpuDisplayMode,
+    pub refresh_rate: RefreshInterval,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default, Sequence)]
+#[derive(Debug, Clone)]
+pub enum ConfigChange {
+    Theme(Theme),
+    ExpandedSidebar(bool),
+    ProcessCpuDisplayMode(ProcessCpuDisplayMode),
+    RefreshRate(RefreshInterval),
+}
+
+impl Config {
+    pub fn apply(&mut self, change: ConfigChange) {
+        match change {
+            ConfigChange::Theme(theme) => self.theme = theme,
+            ConfigChange::ExpandedSidebar(expanded) => self.expanded_sidebar = expanded,
+            ConfigChange::ProcessCpuDisplayMode(mode) => self.process_cpu_display_mode = mode,
+            ConfigChange::RefreshRate(duration) => self.refresh_rate = duration,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ProcessCpuDisplayMode {
+    #[default]
+    TotalCapacity,
+    PerCore,
+}
+
+impl ProcessCpuDisplayMode {
+    pub const ALL: [Self; 2] = [Self::TotalCapacity, Self::PerCore];
+}
+
+impl fmt::Display for ProcessCpuDisplayMode {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(match self {
+            Self::TotalCapacity => "System",
+            Self::PerCore => "Per-core",
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct RefreshInterval(Duration);
+
+impl RefreshInterval {
+    pub const ALL: [RefreshInterval; 4] = [
+        RefreshInterval(Duration::from_millis(500)),
+        RefreshInterval(Duration::from_secs(1)),
+        RefreshInterval(Duration::from_secs(2)),
+        RefreshInterval(Duration::from_secs(5)),
+    ];
+
+    pub fn duration(&self) -> Duration {
+        self.0
+    }
+}
+
+impl Default for RefreshInterval {
+    fn default() -> Self {
+        Self(Duration::from_millis(500))
+    }
+}
+
+impl fmt::Display for RefreshInterval {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let secs = self.0.as_secs_f32();
+        let suffix = match secs {
+            0.0..2.0 => "second",
+            _ => "seconds",
+        };
+        write!(f, "{secs} {suffix}",)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum Theme {
     #[default]
     Light,
@@ -64,9 +139,9 @@ impl From<Theme> for iced::Theme {
     }
 }
 
-impl Theme {
-    pub fn name(&self) -> &'static str {
-        match self {
+impl std::fmt::Display for Theme {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(match self {
             Theme::Light => "Light",
             Theme::Dark => "Dark",
             Theme::Dracula => "Dracula",
@@ -89,6 +164,33 @@ impl Theme {
             Theme::Nightfly => "Nightfly",
             Theme::Oxocarbon => "Oxocarbon",
             Theme::Ferra => "Ferra",
-        }
+        })
     }
+}
+
+impl Theme {
+    pub const ALL: [Self; 22] = [
+        Self::Light,
+        Self::Dark,
+        Self::Dracula,
+        Self::Nord,
+        Self::SolarizedLight,
+        Self::SolarizedDark,
+        Self::GruvboxLight,
+        Self::GruvboxDark,
+        Self::CatppuccinLatte,
+        Self::CatppuccinFrappe,
+        Self::CatppuccinMacchiato,
+        Self::CatppuccinMocha,
+        Self::TokyoNight,
+        Self::TokyoNightStorm,
+        Self::TokyoNightLight,
+        Self::KanagawaWave,
+        Self::KanagawaDragon,
+        Self::KanagawaLotus,
+        Self::Moonfly,
+        Self::Nightfly,
+        Self::Oxocarbon,
+        Self::Ferra,
+    ];
 }

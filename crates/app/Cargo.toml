@@ -7,8 +7,7 @@ edition.workspace = true
 anyhow.workspace = true
 circular-buffer.workspace = true
 confy.workspace = true
-enum-iterator.workspace = true
-iced = { workspace = true, features = ["tokio"] }
+iced = { workspace = true, features = ["svg", "tokio"] }
 iced_aw.workspace = true
 iced_fonts = { workspace = true, features = ["advanced_text", "lucide"] }
 open.workspace = true

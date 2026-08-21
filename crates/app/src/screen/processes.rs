@@ -16,6 +16,7 @@ use iced_fonts::lucide::{self, advanced_text::search};
 use sysinfo::Pid;
 use system::monitor::{ProcessSnapshot, SystemSnapshot};
 
+use crate::config::ProcessCpuDisplayMode;
 use crate::widgets::shell::SHELL_BORDER_RADIUS;
 use crate::widgets::{
     button::{icon_button, rounded, rounded_full},
@@ -128,7 +129,11 @@ impl ProcessesScreen {
         }
     }
 
-    pub fn view(&self, snapshot: &SystemSnapshot) -> Element<'_, Message> {
+    pub fn view(
+        &self,
+        snapshot: &SystemSnapshot,
+        process_cpu_display_mode: ProcessCpuDisplayMode,
+    ) -> Element<'_, Message> {
         let mut pids = snapshot
             .processes
             .values()
@@ -194,7 +199,11 @@ impl ProcessesScreen {
             rule::horizontal(1),
             scrollable(column(pids.into_iter().map(|pid| {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
-                self.process_row(process)
+                self.process_row(
+                    process,
+                    snapshot.cpu_usage.cpus.len(),
+                    process_cpu_display_mode,
+                )
             })))
             .width(Fill)
             .height(Fill)
@@ -329,7 +338,12 @@ impl ProcessesScreen {
         base
     }
 
-    fn process_row(&self, process: &ProcessSnapshot) -> Element<'_, Message> {
+    fn process_row(
+        &self,
+        process: &ProcessSnapshot,
+        cpus_len: usize,
+        process_cpu_display_mode: ProcessCpuDisplayMode,
+    ) -> Element<'_, Message> {
         const FONT_SIZE: f32 = 14.0;
         const CONTAINER_PADDING: [f32; 2] = [0.0, 8.0];
         let is_selected = self.selected_process == Some(process.pid);
@@ -337,9 +351,20 @@ impl ProcessesScreen {
             container(text(process.name.clone()).size(FONT_SIZE))
                 .padding(CONTAINER_PADDING)
                 .width(Fill),
-            container(text(format!("{:.2}%", process.cpu_usage)).size(FONT_SIZE))
-                .padding(CONTAINER_PADDING)
-                .width(CPU_COLUMN_WIDTH),
+            container(
+                text(format!(
+                    "{:.2}%",
+                    match process_cpu_display_mode {
+                        ProcessCpuDisplayMode::TotalCapacity => {
+                            process.cpu_usage / cpus_len as f32
+                        }
+                        ProcessCpuDisplayMode::PerCore => process.cpu_usage,
+                    }
+                ))
+                .size(FONT_SIZE)
+            )
+            .padding(CONTAINER_PADDING)
+            .width(CPU_COLUMN_WIDTH),
             container(text(format!("{:.2}MB", process.memory.as_mib_f64())).size(FONT_SIZE))
                 .padding(CONTAINER_PADDING)
                 .width(MEMORY_COLUMN_WIDTH),

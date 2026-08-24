@@ -169,33 +169,7 @@ impl ProcessesScreen {
         });
 
         let mut stack = stack![column![
-            row![
-                button(self.header_label("Name", SortColumn::Name))
-                    .width(Fill)
-                    .style(|theme, status| self.header_button(theme, status, SortColumn::Name))
-                    .padding(HEADER_PADDING)
-                    .on_press(Message::SortBy(SortColumn::Name)),
-                rule::vertical(1),
-                button(self.header_label("CPU", SortColumn::Cpu))
-                    .width(CPU_COLUMN_WIDTH)
-                    .style(|theme, status| self.header_button(theme, status, SortColumn::Cpu))
-                    .padding(HEADER_PADDING)
-                    .on_press(Message::SortBy(SortColumn::Cpu)),
-                rule::vertical(1),
-                button(self.header_label("Memory", SortColumn::Memory))
-                    .width(MEMORY_COLUMN_WIDTH)
-                    .style(|theme, status| self.header_button(theme, status, SortColumn::Memory))
-                    .padding(HEADER_PADDING)
-                    .on_press(Message::SortBy(SortColumn::Memory)),
-                rule::vertical(1),
-                button(self.header_label("Username", SortColumn::Username))
-                    .width(USERNAME_COLUMN_WIDTH)
-                    .style(|theme, status| self.header_button(theme, status, SortColumn::Username))
-                    .padding(HEADER_PADDING)
-                    .on_press(Message::SortBy(SortColumn::Username)),
-            ]
-            .height(Shrink)
-            .width(Fill),
+            self.header(),
             rule::horizontal(1),
             scrollable(column(pids.into_iter().map(|pid| {
                 let process = snapshot.processes.get(&pid).expect("Cannot find process");
@@ -300,6 +274,39 @@ impl ProcessesScreen {
         .align_y(Center)
         .spacing(8)
         .into()
+    }
+
+    fn header(&self) -> Element<'_, Message> {
+        let header = row![
+            button(self.header_label("Name", SortColumn::Name))
+                .width(Fill)
+                .style(|theme, status| self.header_button(theme, status, SortColumn::Name))
+                .padding(HEADER_PADDING)
+                .on_press(Message::SortBy(SortColumn::Name)),
+            rule::vertical(1),
+            button(self.header_label("CPU", SortColumn::Cpu))
+                .width(CPU_COLUMN_WIDTH)
+                .style(|theme, status| self.header_button(theme, status, SortColumn::Cpu))
+                .padding(HEADER_PADDING)
+                .on_press(Message::SortBy(SortColumn::Cpu)),
+            rule::vertical(1),
+            button(self.header_label("Memory", SortColumn::Memory))
+                .width(MEMORY_COLUMN_WIDTH)
+                .style(|theme, status| self.header_button(theme, status, SortColumn::Memory))
+                .padding(HEADER_PADDING)
+                .on_press(Message::SortBy(SortColumn::Memory)),
+        ];
+
+        #[cfg(not(target_os = "windows"))]
+        let header = header.push(rule::vertical(1)).push(
+            button(self.header_label("Username", SortColumn::Username))
+                .width(USERNAME_COLUMN_WIDTH)
+                .style(|theme, status| self.header_button(theme, status, SortColumn::Username))
+                .padding(HEADER_PADDING)
+                .on_press(Message::SortBy(SortColumn::Username)),
+        );
+
+        header.height(Shrink).width(Fill).into()
     }
 
     fn header_label(&self, label: &'static str, column: SortColumn) -> Element<'_, Message> {

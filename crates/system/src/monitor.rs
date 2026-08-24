@@ -1,4 +1,7 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 use sysinfo::{
     CpuRefreshKind, Disks, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System,
@@ -20,6 +23,7 @@ pub struct SystemMonitor {
 
 #[derive(Debug, Clone)]
 pub struct SystemSnapshot {
+    pub captured_at: Instant,
     pub processes: HashMap<Pid, ProcessSnapshot>,
     pub cpu_usage: CpuUsage,
     pub memory_usage: Memory,
@@ -50,6 +54,7 @@ impl SystemMonitor {
 
     pub fn snapshot(&self) -> SystemSnapshot {
         SystemSnapshot {
+            captured_at: Instant::now(),
             processes: self
                 .system
                 .processes()
@@ -78,6 +83,12 @@ impl SystemMonitor {
             cpu_usage: CpuUsage {
                 total: self.system.global_cpu_usage(),
                 cpus: self.system.cpus().iter().map(|c| c.cpu_usage()).collect(),
+                frequency: self
+                    .system
+                    .cpus()
+                    .first()
+                    .expect("No CPU core to collect frequency from")
+                    .frequency(),
             },
             memory_usage: Memory::from_bytes(self.system.used_memory()),
             total_memory: Memory::from_bytes(self.system.total_memory()),

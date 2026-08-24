@@ -11,7 +11,7 @@ iced = { workspace = true, features = ["svg", "tokio"] }
 iced_aw.workspace = true
 iced_fonts = { workspace = true, features = ["advanced_text", "lucide"] }
 open.workspace = true
-plotters = { workspace = true, features = ["area_series", "line_series"] }
+plotters = { workspace = true, features = ["ab_glyph", "area_series", "line_series"] }
 plotters-iced.workspace = true
 serde.workspace = true
 sysinfo.workspace = true

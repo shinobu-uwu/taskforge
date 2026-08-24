@@ -13,7 +13,7 @@ use crate::{
         processes::{self, ProcessesScreen},
         settings::{self, SettingsScreen},
     },
-    state::history::{DiskHistory, History},
+    state::history::{DiskHistory, History, TimedSample},
     widgets::{
         shell,
         sidebar::{self, Sidebar},
@@ -25,8 +25,8 @@ pub struct App {
     pub config: Config,
     monitor: Option<Box<SystemMonitor>>,
     snapshot: SystemSnapshot,
-    cpu_history: History<f32>,
-    memory_history: History<Memory>,
+    cpu_history: History<TimedSample<f32>>,
+    memory_history: History<TimedSample<Memory>>,
     disks_history: Vec<DiskHistory>,
     current_screen: Screen,
     processes: ProcessesScreen,
@@ -121,18 +121,29 @@ impl App {
             }
             Message::MonitorUpdated { monitor, snapshot } => {
                 self.monitor = Some(monitor);
-                self.cpu_history.push_back(snapshot.cpu_usage.total);
-                self.memory_history.push_back(snapshot.memory_usage);
+                self.cpu_history.push_back(TimedSample::new(
+                    snapshot.captured_at,
+                    snapshot.cpu_usage.total,
+                ));
+                self.memory_history.push_back(TimedSample::new(
+                    snapshot.captured_at,
+                    snapshot.memory_usage,
+                ));
                 for disk in &snapshot.disks {
                     if let Some(history) = self
                         .disks_history
                         .iter_mut()
                         .find(|history| history.name == disk.name)
                     {
-                        history.usage.push_back(disk.usage);
+                        history
+                            .usage
+                            .push_back(TimedSample::new(snapshot.captured_at, disk.usage));
                     } else {
-                        self.disks_history
-                            .push(DiskHistory::new(disk.name.clone(), disk.usage));
+                        self.disks_history.push(DiskHistory::new(
+                            disk.name.clone(),
+                            snapshot.captured_at,
+                            disk.usage,
+                        ));
                     }
                 }
                 self.snapshot = snapshot;
@@ -154,6 +165,7 @@ impl App {
             Screen::Charts => self
                 .charts
                 .view(
+                    &self.snapshot,
                     &self.cpu_history,
                     &self.memory_history,
                     &self.disks_history,

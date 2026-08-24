@@ -3,7 +3,7 @@ use std::time::Instant;
 use iced::{
     Alignment::Center,
     Animation, Element, Fill, Subscription,
-    widget::{button, column, container, row, space},
+    widget::{button, column, container, row, rule, space},
 };
 use iced_fonts::lucide;
 
@@ -114,9 +114,15 @@ impl Sidebar {
         .on_press(Message::Navigate(Screen::Settings));
 
         container(
-            column![processes, charts, space::vertical(), settings,]
-                .width(Fill)
-                .spacing(12),
+            column![
+                processes,
+                charts,
+                space::vertical(),
+                rule::horizontal(1),
+                settings,
+            ]
+            .width(Fill)
+            .spacing(12),
         )
         .width(width)
         .height(Fill)

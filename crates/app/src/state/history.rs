@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    time::Instant,
+};
 
 use circular_buffer::FixedCircularBuffer;
 use system::disk::DiskUsage;
@@ -17,13 +20,28 @@ pub struct NetworkHistory {
 #[derive(Debug, Clone)]
 pub struct DiskHistory {
     pub name: String,
-    pub usage: History<DiskUsage>,
+    pub usage: History<TimedSample<DiskUsage>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TimedSample<T> {
+    pub captured_at: Instant,
+    pub sample: T,
+}
+
+impl<T> TimedSample<T> {
+    pub fn new(captured_at: Instant, sample: T) -> Self {
+        Self {
+            captured_at,
+            sample,
+        }
+    }
 }
 
 impl DiskHistory {
-    pub fn new(name: String, usage: DiskUsage) -> Self {
+    pub fn new(name: String, captured_at: Instant, usage: DiskUsage) -> Self {
         let mut history = History::new();
-        history.push_back(usage);
+        history.push_back(TimedSample::new(captured_at, usage));
 
         Self {
             name,

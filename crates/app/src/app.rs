@@ -1,4 +1,4 @@
-use std::{env::var, time::Instant};
+use std::time::Instant;
 
 use iced::{
     Element, Fill, Font, Subscription, Task, border,
@@ -73,7 +73,7 @@ impl App {
             Config::default()
         });
         let expanded_sidebar = config.expanded_sidebar;
-        let show_fps = var("TASKFORGE_SHOW_FPS").is_ok_and(|v| v == "1");
+        let show_fps = std::env::var_os("TASKFORGE_SHOW_FPS").is_some_and(|v| v == "1");
 
         Self {
             monitor: Some(Box::new(monitor)),

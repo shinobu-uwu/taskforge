@@ -1,8 +1,9 @@
 use iced::{
-    Element, Fill, Font,
+    Background, Color, Element, Fill, Font,
     Length::Shrink,
     Theme, border,
-    widget::{Text, button, column, row, rule, space, text},
+    theme::palette::{darken, lighten},
+    widget::{Text, button, column, container, row, rule, scrollable, space, text},
 };
 use iced_fonts::lucide;
 
@@ -30,6 +31,35 @@ pub enum Chart {
     Disk(String),
 }
 
+#[derive(Debug, Clone, Copy)]
+enum ChartColor {
+    Primary,
+    Success,
+    Warning,
+}
+
+impl ChartColor {
+    fn resolve(self, theme: &Theme) -> Color {
+        let palette = theme.palette();
+
+        match self {
+            Self::Primary => palette.primary,
+            Self::Success => palette.success,
+            Self::Warning => palette.warning,
+        }
+    }
+}
+
+impl Chart {
+    const fn color(&self) -> ChartColor {
+        match self {
+            Self::Cpu => ChartColor::Primary,
+            Self::Memory => ChartColor::Success,
+            Self::Disk(_) => ChartColor::Warning,
+        }
+    }
+}
+
 impl ChartsScreen {
     pub fn update(&mut self, message: Message) {
         match message {
@@ -49,13 +79,11 @@ impl ChartsScreen {
         let cpu_title = format!("CPU {:.0}%", snapshot.cpu_usage.total);
         let mut charts = column![
             self.chart_button(
-                lucide::cpu(),
                 cpu_title,
                 cpu_chart(cpu_history, theme, self.preview_chart_settings(),),
                 Chart::Cpu,
             ),
             self.chart_button(
-                lucide::memory_stick(),
                 "Memory",
                 memory_chart(
                     memory_history,
@@ -69,7 +97,6 @@ impl ChartsScreen {
 
         for disk in disks_history {
             charts = charts.push(self.chart_button(
-                lucide::hard_drive(),
                 &disk.name,
                 disk_chart(&disk.usage, theme, self.preview_chart_settings()),
                 Chart::Disk(disk.name.clone()),
@@ -77,7 +104,7 @@ impl ChartsScreen {
         }
 
         row![
-            charts.spacing(8).width(240).height(Fill),
+            scrollable(charts.spacing(8).width(240).height(Fill)).spacing(8),
             self.cpu_content(snapshot, cpu_history, theme)
         ]
         .padding(16)
@@ -88,35 +115,31 @@ impl ChartsScreen {
 
     fn chart_button<'a>(
         &'a self,
-        icon: Text<'a>,
         label: impl text::IntoFragment<'a>,
         chart_element: Element<'a, Message>,
         chart: Chart,
     ) -> Element<'a, Message> {
         let is_selected = self.selected_chart == chart;
+        let chart_color = chart.color();
 
-        button(
-            row![
-                icon.size(24),
-                column![text(label).size(20), chart_element].spacing(4)
-            ]
-            .spacing(8),
-        )
-        .style(move |theme, status| {
-            let mut base = button::subtle(theme, status);
-            let palette = theme.palette();
+        button(column![text(label).size(20), chart_element].spacing(4))
+            .style(move |theme, status| {
+                let mut base = button::subtle(theme, status);
+                let palette = theme.palette();
 
-            if is_selected {
-                base.border = border::rounded(8).color(palette.primary).width(1)
-            } else {
-                base.border = border::rounded(8).color(palette.background).width(1)
-            }
+                if is_selected {
+                    base.border = border::rounded(8)
+                        .color(chart_color.resolve(theme))
+                        .width(1)
+                } else {
+                    base.border = border::rounded(8).color(palette.background).width(1)
+                }
 
-            base
-        })
-        .height(120)
-        .on_press(Message::SelectChart(chart))
-        .into()
+                base
+            })
+            .height(120)
+            .on_press(Message::SelectChart(chart))
+            .into()
     }
 
     fn cpu_content<'a>(

@@ -1,6 +1,9 @@
+use std::{env::var, time::Instant};
+
 use iced::{
-    Element, Fill, Font, Subscription, Task,
-    widget::{column, container, row, space, text},
+    Element, Fill, Font, Subscription, Task, border,
+    theme::palette,
+    widget::{column, container, row, space, stack, text},
 };
 use system::memory::Memory;
 use system::monitor::{SystemMonitor, SystemSnapshot};
@@ -33,6 +36,10 @@ pub struct App {
     settings: SettingsScreen,
     charts: ChartsScreen,
     sidebar: Sidebar,
+    show_fps: bool,
+    fps: u32,
+    frame_count: u32,
+    last_fps_update: Instant,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -54,6 +61,7 @@ pub enum Message {
         monitor: Box<SystemMonitor>,
         snapshot: SystemSnapshot,
     },
+    Frame(Instant),
 }
 
 impl App {
@@ -65,6 +73,7 @@ impl App {
             Config::default()
         });
         let expanded_sidebar = config.expanded_sidebar;
+        let show_fps = var("TASKFORGE_SHOW_FPS").is_ok_and(|v| v == "1");
 
         Self {
             monitor: Some(Box::new(monitor)),
@@ -78,6 +87,10 @@ impl App {
             settings: SettingsScreen,
             config,
             sidebar: Sidebar::new(expanded_sidebar),
+            show_fps,
+            fps: 0,
+            frame_count: 0,
+            last_fps_update: Instant::now(),
         }
     }
 
@@ -148,6 +161,15 @@ impl App {
                 }
                 self.snapshot = snapshot;
             }
+            Message::Frame(now) => {
+                self.frame_count += 1;
+
+                if now.duration_since(self.last_fps_update).as_secs_f32() >= 1.0 {
+                    self.fps = self.frame_count;
+                    self.frame_count = 0;
+                    self.last_fps_update = now;
+                }
+            }
         }
 
         Task::none()
@@ -176,23 +198,41 @@ impl App {
             Screen::Settings => self.settings.view(&self.config).map(Message::Settings),
         };
 
-        container(row![
-            sidebar,
-            column![
-                self.header(),
-                container(screen)
-                    .width(Fill)
-                    .height(Fill)
-                    .clip(true)
-                    .style(shell::content)
-            ]
+        let mut stack = stack![
+            container(row![
+                sidebar,
+                column![
+                    self.header(),
+                    container(screen)
+                        .width(Fill)
+                        .height(Fill)
+                        .clip(true)
+                        .style(shell::content)
+                ]
+                .width(Fill)
+                .height(Fill)
+            ])
             .width(Fill)
             .height(Fill)
-        ])
-        .width(Fill)
-        .height(Fill)
-        .style(shell::background)
-        .into()
+            .style(shell::background)
+        ];
+
+        if self.show_fps {
+            let fps = container(text(format!("FPS: {}", self.fps)))
+                .padding(8)
+                .style(|theme: &iced::Theme| {
+                    let background = theme.palette().success.scale_alpha(0.8);
+
+                    container::Style::default()
+                        .background(background)
+                        .color(palette::readable(background, theme.palette().text))
+                        .border(border::rounded(6))
+                });
+
+            stack = stack.push(container(fps).padding(8).align_right(Fill).align_top(Fill));
+        }
+
+        stack.into()
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
@@ -200,6 +240,7 @@ impl App {
             iced::time::every(self.config.refresh_rate.duration()).map(|_| Message::PollRequested),
             self.sidebar.subscription().map(Message::Sidebar),
             self.processes.subscription().map(Message::Processes),
+            iced::window::frames().map(Message::Frame),
         ])
     }
 

@@ -30,6 +30,9 @@ pub struct SystemSnapshot {
     pub total_memory: Memory,
     pub uptime: Duration,
     pub disks: Vec<DiskSnapshot>,
+    pub core_count: Option<usize>,
+    pub thread_count: Option<usize>,
+    pub descriptors_count: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +57,9 @@ impl SystemMonitor {
 
     pub fn snapshot(&self) -> SystemSnapshot {
         SystemSnapshot {
+            core_count: System::physical_core_count(),
+            thread_count: thread_count(),
+            descriptors_count: descriptor_count(),
             captured_at: Instant::now(),
             processes: self
                 .system

@@ -1,11 +1,9 @@
 use iced::{
-    Background, Color, Element, Fill, Font,
+    Color, Element, Fill,
     Length::Shrink,
     Theme, border,
-    theme::palette::{darken, lighten},
-    widget::{Text, button, column, container, row, rule, scrollable, space, text},
+    widget::{button, column, container, row, rule, scrollable, space, text},
 };
-use iced_fonts::lucide;
 
 use crate::{
     state::history::{DiskHistory, History, TimedSample},
@@ -148,34 +146,87 @@ impl ChartsScreen {
         history: &'a History<TimedSample<f32>>,
         theme: &Theme,
     ) -> Element<'a, Message> {
-        column![
-            text("CPU").size(20).font(Font {
-                weight: iced::font::Weight::Semibold,
-                ..Default::default()
-            }),
-            cpu_chart(history, theme, ChartSettings::detailed()),
+        let secs = snapshot.uptime.as_secs();
+        let days = secs / (24 * 60 * 60);
+        let hours = (secs % (24 * 60 * 60)) / (60 * 60);
+        let minutes = (secs % (60 * 60)) / 60;
+        let seconds = secs % 60;
+
+        let summary = column![
+            row![
+                self.content_field("Usage", format!("{:.0}%", snapshot.cpu_usage.total)),
+                space::horizontal(),
+                self.content_field(
+                    "Frequency",
+                    format!("{:.2} GHz", snapshot.cpu_usage.frequency as f64 / 1000.0)
+                ),
+            ],
             rule::horizontal(1),
             row![
-                space::horizontal(),
-                column![
-                    row![
-                        self.content_field("Usage", format!("{:.0}%", snapshot.cpu_usage.total)),
-                        self.content_field(
-                            "Frequency",
-                            format!("{:.2} GHz", snapshot.cpu_usage.frequency as f64 / 1000.0)
-                        ),
-                    ]
-                    .spacing(8)
-                ]
-                .padding(8)
-                .spacing(8),
-                rule::vertical(1),
-                column![self.content_field("Usage", format!("{:.0}%", snapshot.cpu_usage.total)),]
-                    .padding(8)
-                    .spacing(8),
-                space::horizontal(),
+                self.content_field("Processes", snapshot.processes.len()),
+                self.content_field(
+                    "Threads",
+                    match snapshot.thread_count {
+                        Some(t) => t.to_string(),
+                        None => "Unknown".to_string(),
+                    }
+                ),
+                self.content_field(
+                    "File descriptors",
+                    match snapshot.descriptors_count {
+                        Some(d) => d.to_string(),
+                        None => "Unknown".to_string(),
+                    }
+                )
             ]
-            .height(Shrink),
+            .spacing(8),
+            rule::horizontal(1),
+            self.content_field(
+                "Uptime",
+                format!("{}d {}:{:02}:{:02}", days, hours, minutes, seconds)
+            )
+        ]
+        .padding(8)
+        .spacing(8);
+
+        // TODO: Replace the placeholder values with CpuInfo fields.
+        let details = row![
+            column![
+                text("Base speed").style(text::secondary),
+                text("Sockets").style(text::secondary),
+                text("Cores").style(text::secondary),
+                text("Logical processors").style(text::secondary),
+                text("Virtualization").style(text::secondary),
+                text("L1 cache").style(text::secondary),
+                text("L2 cache").style(text::secondary),
+                text("L3 cache").style(text::secondary),
+            ]
+            .spacing(8),
+            column![
+                text("3.60 GHz"),
+                text("1"),
+                text(match snapshot.core_count {
+                    Some(c) => c.to_string(),
+                    None => "Unknown".to_string(),
+                }),
+                text(snapshot.cpu_usage.cpus.len()),
+                text("Enabled"),
+                text("640 KB"),
+                text("10.0 MB"),
+                text("32.0 MB"),
+            ]
+            .spacing(8),
+        ]
+        .spacing(24)
+        .padding(8);
+
+        let system_details = row![summary, rule::vertical(1), details]
+            .width(Shrink)
+            .height(Shrink);
+
+        column![
+            cpu_chart(history, theme, ChartSettings::detailed()),
+            container(system_details).center_x(Fill),
         ]
         .padding(16)
         .width(Fill)

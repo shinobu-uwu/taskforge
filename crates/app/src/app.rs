@@ -44,8 +44,8 @@ pub struct App {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Screen {
-    #[default]
     Processes,
+    #[default]
     Charts,
     Settings,
 }

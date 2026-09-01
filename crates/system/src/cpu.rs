@@ -4,3 +4,12 @@ pub struct CpuUsage {
     pub frequency: u64,
     pub cpus: Vec<f32>,
 }
+
+#[derive(Debug, Clone)]
+pub struct CpuInfo {
+    pub name: String,
+    pub core_count: usize,
+    pub sockets: usize,
+    pub base_frequency: u64,
+    pub caches: Vec<usize>,
+}

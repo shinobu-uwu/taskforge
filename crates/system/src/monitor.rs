@@ -12,6 +12,7 @@ use crate::{
     cpu::CpuUsage,
     disk::{DiskSnapshot, DiskUsage},
     memory::Memory,
+    native::{Backend, NativeBackend},
 };
 
 #[derive(Debug)]
@@ -19,6 +20,7 @@ pub struct SystemMonitor {
     system: System,
     disks: Disks,
     users: Users,
+    backend: NativeBackend,
 }
 
 #[derive(Debug, Clone)]
@@ -47,19 +49,20 @@ pub struct ProcessSnapshot {
 }
 
 impl SystemMonitor {
-    pub fn new(system: System, disks: Disks, users: Users) -> Self {
+    pub fn new(system: System, disks: Disks, users: Users, backend: NativeBackend) -> Self {
         Self {
             system,
             disks,
             users,
+            backend,
         }
     }
 
     pub fn snapshot(&self) -> SystemSnapshot {
         SystemSnapshot {
-            core_count: System::physical_core_count(),
-            thread_count: thread_count(),
-            descriptors_count: descriptor_count(),
+            core_count: self.backend.core_count(),
+            thread_count: self.backend.thread_count(),
+            descriptors_count: self.backend.descriptor_count(),
             captured_at: Instant::now(),
             processes: self
                 .system
@@ -142,6 +145,7 @@ impl Default for SystemMonitor {
         let system = System::new_with_specifics(Self::refresh_kind());
         let disks = Disks::new_with_refreshed_list();
         let users = Users::new_with_refreshed_list();
-        Self::new(system, disks, users)
+        let backend = NativeBackend::new();
+        Self::new(system, disks, users, backend)
     }
 }

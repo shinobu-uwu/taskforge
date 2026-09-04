@@ -9,7 +9,7 @@ use crate::{
     state::history::{DiskHistory, History, TimedSample},
     widgets::chart::{ChartSettings, cpu_chart, disk_chart, memory_chart},
 };
-use system::{memory::Memory, monitor::SystemSnapshot};
+use system::{memory::Memory, snapshot::SystemSnapshot};
 
 #[derive(Debug, Default)]
 pub struct ChartsScreen {
@@ -166,7 +166,7 @@ impl ChartsScreen {
                 self.content_field("Processes", snapshot.processes.len()),
                 self.content_field(
                     "Threads",
-                    match snapshot.thread_count {
+                    match snapshot.logical_processor_count {
                         Some(t) => t.to_string(),
                         None => "Unknown".to_string(),
                     }
@@ -189,7 +189,6 @@ impl ChartsScreen {
         .padding(8)
         .spacing(8);
 
-        // TODO: Replace the placeholder values with CpuInfo fields.
         let details = row![
             column![
                 text("Base speed").style(text::secondary),
@@ -201,7 +200,7 @@ impl ChartsScreen {
                 text("L2 cache").style(text::secondary),
                 text("L3 cache").style(text::secondary),
             ]
-            .spacing(8),
+            .spacing(4),
             column![
                 text("3.60 GHz"),
                 text("1"),
@@ -209,13 +208,16 @@ impl ChartsScreen {
                     Some(c) => c.to_string(),
                     None => "Unknown".to_string(),
                 }),
-                text(snapshot.cpu_usage.cpus.len()),
+                text(match snapshot.logical_processor_count {
+                    Some(c) => c.to_string(),
+                    None => "Unknown".to_string(),
+                }),
                 text("Enabled"),
                 text("640 KB"),
                 text("10.0 MB"),
                 text("32.0 MB"),
             ]
-            .spacing(8),
+            .spacing(4),
         ]
         .spacing(24)
         .padding(8);

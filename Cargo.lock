@@ -109,7 +109,6 @@ dependencies = [
  "plotters",
  "plotters-iced2",
  "serde",
- "sysinfo",
  "system",
  "tracing",
  "tracing-appender",

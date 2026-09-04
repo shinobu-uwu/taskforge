@@ -1,18 +1,17 @@
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use sysinfo::{
-    CpuRefreshKind, Disks, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System,
-    ThreadKind, UpdateKind, Users,
+    CpuRefreshKind, Disks, MemoryRefreshKind, ProcessRefreshKind, RefreshKind, System, UpdateKind,
+    Users,
 };
 
 use crate::{
-    cpu::CpuUsage,
+    cpu::{CpuInfo, CpuUsage},
     disk::{DiskSnapshot, DiskUsage},
     memory::Memory,
     native::{Backend, NativeBackend},
+    process::Pid,
+    snapshot::{ProcessSnapshot, SystemSnapshot},
 };
 
 #[derive(Debug)]
@@ -21,31 +20,6 @@ pub struct SystemMonitor {
     disks: Disks,
     users: Users,
     backend: NativeBackend,
-}
-
-#[derive(Debug, Clone)]
-pub struct SystemSnapshot {
-    pub captured_at: Instant,
-    pub processes: HashMap<Pid, ProcessSnapshot>,
-    pub cpu_usage: CpuUsage,
-    pub memory_usage: Memory,
-    pub total_memory: Memory,
-    pub uptime: Duration,
-    pub disks: Vec<DiskSnapshot>,
-    pub core_count: Option<usize>,
-    pub thread_count: Option<usize>,
-    pub descriptors_count: Option<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ProcessSnapshot {
-    pub pid: Pid,
-    pub parent: Option<Pid>,
-    pub name: String,
-    pub cpu_usage: f32,
-    pub memory: Memory,
-    pub thread_kind: Option<ThreadKind>,
-    pub username: Option<String>,
 }
 
 impl SystemMonitor {
@@ -58,11 +32,15 @@ impl SystemMonitor {
         }
     }
 
+    pub fn cpu_info(&self) -> CpuInfo {
+        self.backend.cpu_info()
+    }
+
     pub fn snapshot(&self) -> SystemSnapshot {
         SystemSnapshot {
             core_count: self.backend.core_count(),
-            thread_count: self.backend.thread_count(),
-            descriptors_count: self.backend.descriptor_count(),
+            logical_processor_count: self.backend.logical_processor_count(),
+            descriptors_count: self.backend.handle_count(),
             captured_at: Instant::now(),
             processes: self
                 .system
@@ -70,14 +48,14 @@ impl SystemMonitor {
                 .iter()
                 .map(|(pid, proc)| {
                     (
-                        *pid,
+                        Pid::from(*pid),
                         ProcessSnapshot {
-                            pid: proc.pid(),
-                            parent: proc.parent(),
+                            pid: proc.pid().into(),
+                            parent: proc.parent().map(Into::into),
                             name: proc.name().to_string_lossy().into_owned(),
                             cpu_usage: proc.cpu_usage(),
                             memory: Memory::from_bytes(proc.memory()),
-                            thread_kind: proc.thread_kind(),
+                            thread_kind: proc.thread_kind().map(Into::into),
                             username: proc.effective_user_id().map(|id| {
                                 self.users
                                     .get_user_by_id(id)
@@ -123,7 +101,10 @@ impl SystemMonitor {
     }
 
     pub fn kill_process(&mut self, pid: Pid) -> bool {
-        self.system.processes().get(&pid).is_some_and(|p| p.kill())
+        self.system
+            .processes()
+            .get(&sysinfo::Pid::from_u32(pid.as_u32()))
+            .is_some_and(|p| p.kill())
     }
 
     fn refresh_kind() -> RefreshKind {

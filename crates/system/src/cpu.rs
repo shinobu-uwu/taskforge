@@ -1,3 +1,5 @@
+use crate::frequency::Frequency;
+
 #[derive(Debug, Clone)]
 pub struct CpuUsage {
     pub total: f32,
@@ -10,6 +12,7 @@ pub struct CpuInfo {
     pub name: String,
     pub core_count: usize,
     pub sockets: usize,
-    pub base_frequency: u64,
+    pub base_frequency: Frequency,
     pub caches: Vec<usize>,
+    pub virtualization_enabled: bool,
 }

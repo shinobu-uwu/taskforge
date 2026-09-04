@@ -13,8 +13,10 @@ use iced::{
     },
 };
 use iced_fonts::lucide::{self, advanced_text::search};
-use sysinfo::Pid;
-use system::monitor::{ProcessSnapshot, SystemSnapshot};
+use system::{
+    process::Pid,
+    snapshot::{ProcessSnapshot, SystemSnapshot},
+};
 
 use crate::config::ProcessCpuDisplayMode;
 use crate::widgets::shell::SHELL_BORDER_RADIUS;

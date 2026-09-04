@@ -5,8 +5,7 @@ use iced::{
     theme::palette,
     widget::{column, container, row, space, stack, text},
 };
-use system::memory::Memory;
-use system::monitor::{SystemMonitor, SystemSnapshot};
+use system::{memory::Memory, monitor::SystemMonitor, snapshot::SystemSnapshot};
 use tracing::error;
 
 use crate::{

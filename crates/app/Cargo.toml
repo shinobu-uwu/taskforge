@@ -14,7 +14,6 @@ open.workspace = true
 plotters = { workspace = true, features = ["ab_glyph", "area_series", "line_series"] }
 plotters-iced.workspace = true
 serde.workspace = true
-sysinfo.workspace = true
 system = { path = "../system" }
 tracing.workspace = true
 tracing-appender.workspace = true

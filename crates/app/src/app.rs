@@ -40,8 +40,8 @@ pub struct App {
     frame_count: u32,
     last_fps_update: Instant,
     cpu_info: CpuInfo,
-    startup_time: Instant,
-    first_frame_time: Option<Instant>,
+    startup: Instant,
+    first_frame: Option<Instant>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -67,7 +67,7 @@ pub enum Message {
 }
 
 impl App {
-    pub fn new(startup_time: Instant) -> Self {
+    pub fn new(startup: Instant) -> Self {
         let monitor = SystemMonitor::default();
         let snapshot = monitor.snapshot();
         let config = confy::load("taskforge", None).unwrap_or_else(|e| {
@@ -95,8 +95,8 @@ impl App {
             frame_count: 0,
             last_fps_update: Instant::now(),
             cpu_info,
-            startup_time,
-            first_frame_time: None,
+            startup,
+            first_frame: None,
         }
     }
 
@@ -168,9 +168,9 @@ impl App {
                 self.snapshot = snapshot;
             }
             Message::Frame(now) => {
-                if self.first_frame_time.is_none() {
-                    dbg!(now.duration_since(self.startup_time).as_millis());
-                    self.first_frame_time = Some(now)
+                if self.first_frame.is_none() {
+                    dbg!(now.duration_since(self.startup).as_millis());
+                    self.first_frame = Some(now)
                 }
 
                 self.frame_count += 1;

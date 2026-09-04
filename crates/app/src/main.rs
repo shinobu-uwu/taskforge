@@ -46,7 +46,7 @@ fn platform_settings() -> PlatformSpecific {
 }
 
 fn main() -> anyhow::Result<()> {
-    let startup_time = Instant::now();
+    let startup = Instant::now();
     let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
     tracing_subscriber::fmt()
         .with_writer(non_blocking)
@@ -56,7 +56,7 @@ fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    iced::application(move || App::new(startup_time), App::update, App::view)
+    iced::application(move || App::new(startup), App::update, App::view)
         .font(iced_fonts::LUCIDE_FONT_BYTES)
         .subscription(App::subscription)
         .theme(|app: &App| iced::Theme::from(app.config.theme.clone()))

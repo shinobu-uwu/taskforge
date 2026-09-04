@@ -38,6 +38,15 @@ impl super::Backend for LinuxBackend {
         };
         self.parse_cpuinfo(&cpuinfo)
     }
+
+    fn thread_count(&self) -> Option<usize> {
+        std::fs::read_to_string("/proc/loadavg")
+            .ok()?
+            .split_ascii_whitespace()
+            .nth(3)
+            .and_then(|s| s.split_once('/'))
+            .and_then(|(_, total)| total.parse().ok())
+    }
 }
 
 impl LinuxBackend {

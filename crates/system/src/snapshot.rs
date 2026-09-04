@@ -19,9 +19,9 @@ pub struct SystemSnapshot {
     pub total_memory: Memory,
     pub uptime: Duration,
     pub disks: Vec<DiskSnapshot>,
-    pub core_count: Option<usize>,
     pub logical_processor_count: Option<usize>,
-    pub descriptors_count: Option<usize>,
+    pub handle_count: Option<usize>,
+    pub thread_count: Option<usize>,
 }
 
 #[derive(Debug, Clone)]

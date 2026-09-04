@@ -168,14 +168,14 @@ impl ChartsScreen {
                 self.content_field("Processes", snapshot.processes.len()),
                 self.content_field(
                     "Threads",
-                    match snapshot.logical_processor_count {
+                    match snapshot.thread_count {
                         Some(t) => t.to_string(),
                         None => "Unknown".to_string(),
                     }
                 ),
                 self.content_field(
-                    "File descriptors",
-                    match snapshot.descriptors_count {
+                    "Handles",
+                    match snapshot.handle_count {
                         Some(d) => d.to_string(),
                         None => "Unknown".to_string(),
                     }

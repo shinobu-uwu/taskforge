@@ -18,4 +18,5 @@ pub trait Backend {
     fn logical_processor_count(&self) -> Option<usize>;
     fn handle_count(&self) -> Option<usize>;
     fn cpu_info(&self) -> CpuInfo;
+    fn thread_count(&self) -> Option<usize>;
 }

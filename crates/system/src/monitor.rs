@@ -38,9 +38,9 @@ impl SystemMonitor {
 
     pub fn snapshot(&self) -> SystemSnapshot {
         SystemSnapshot {
-            core_count: self.backend.core_count(),
+            thread_count: self.backend.thread_count(),
             logical_processor_count: self.backend.logical_processor_count(),
-            descriptors_count: self.backend.handle_count(),
+            handle_count: self.backend.handle_count(),
             captured_at: Instant::now(),
             processes: self
                 .system

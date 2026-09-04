@@ -20,7 +20,7 @@ impl super::Backend for LinuxBackend {
 
     fn logical_processor_count(&self) -> Option<usize> {
         let cpu_list = std::fs::read_to_string(ONLINE_CPUS_PATH).ok()?;
-        parse_cpu_list(&cpu_list)
+        self.parse_cpu_list(&cpu_list)
     }
 
     fn handle_count(&self) -> Option<usize> {
@@ -32,66 +32,89 @@ impl super::Backend for LinuxBackend {
             .ok()
     }
 
-    fn cpu_info(&self) -> Option<CpuInfo> {
-        let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok()?;
-        parse_cpuinfo(&cpuinfo)
+    fn cpu_info(&self) -> CpuInfo {
+        let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") else {
+            return CpuInfo::default();
+        };
+        self.parse_cpuinfo(&cpuinfo)
     }
 }
 
-fn parse_cpuinfo(cpuinfo: &str) -> Option<CpuInfo> {
-    let name = cpuinfo
-        .lines()
-        .find(|l| l.starts_with("model name"))?
-        .split_once(':')?
-        .1
-        .trim()
-        .to_string();
-    let core_count = System::physical_core_count()?;
-    let sockets: HashSet<usize> = cpuinfo
-        .lines()
-        .filter_map(|l| {
-            if !l.starts_with("physical id") {
-                None
-            } else {
-                l.split_once(':')?.1.trim().parse().ok()
-            }
+impl LinuxBackend {
+    fn parse_cpuinfo(&self, cpuinfo: &str) -> CpuInfo {
+        let name = self.parse_cpu_name(cpuinfo);
+        let core_count = System::physical_core_count();
+        let socket_count = self.parse_socket_count(cpuinfo);
+        let base_frequency = self.base_frequency();
+        let virtualization_enabled = self.virtualization_enabled();
+
+        CpuInfo {
+            name,
+            core_count,
+            socket_count,
+            base_frequency,
+            caches: None,
+            virtualization_enabled,
+        }
+    }
+
+    fn parse_cpu_name(&self, cpuinfo: &str) -> Option<String> {
+        cpuinfo
+            .lines()
+            .find(|l| l.starts_with("model name"))?
+            .split_once(':')
+            .map(|(_, name)| name.trim().to_string())
+    }
+
+    fn parse_socket_count(&self, cpuinfo: &str) -> Option<usize> {
+        Some(
+            cpuinfo
+                .lines()
+                .filter_map(|l| {
+                    if !l.starts_with("physical id") {
+                        None
+                    } else {
+                        l.split_once(':')?.1.trim().parse().ok()
+                    }
+                })
+                .collect::<HashSet<usize>>()
+                .len(),
+        )
+    }
+
+    fn base_frequency(&self) -> Option<Frequency> {
+        let base_frequency: u64 =
+            std::fs::read_to_string("/sys/devices/system/cpu/cpu0/acpi_cppc/nominal_freq")
+                .ok()?
+                .trim()
+                .parse()
+                .ok()?;
+        Some(Frequency::from_mhz(base_frequency))
+    }
+
+    fn virtualization_enabled(&self) -> Option<bool> {
+        std::fs::File::open("/dev/kvm").map(|_| true).ok()
+    }
+
+    fn parse_cpu_list(&self, cpu_list: &str) -> Option<usize> {
+        cpu_list.trim().split(',').try_fold(0usize, |total, entry| {
+            let entry = entry.trim();
+
+            let (start, end) = match entry.split_once('-') {
+                Some((start, end)) => (
+                    start.trim().parse::<usize>().ok()?,
+                    end.trim().parse::<usize>().ok()?,
+                ),
+                None => {
+                    let cpu = entry.parse::<usize>().ok()?;
+                    (cpu, cpu)
+                }
+            };
+
+            let range_size = end.checked_sub(start)?.checked_add(1)?;
+            total.checked_add(range_size)
         })
-        .collect();
-    let base_frequency: u64 =
-        std::fs::read_to_string("/sys/devices/system/cpu/cpu0/acpi_cppc/nominal_freq")
-            .ok()?
-            .parse()
-            .ok()?;
-    let virtualization_enabled = std::fs::File::open("/dev/kvm").is_ok();
-
-    Some(CpuInfo {
-        name,
-        core_count,
-        sockets: sockets.len(),
-        base_frequency: Frequency::from_mhz(base_frequency),
-        caches: vec![],
-        virtualization_enabled,
-    })
-}
-
-fn parse_cpu_list(cpu_list: &str) -> Option<usize> {
-    cpu_list.trim().split(',').try_fold(0usize, |total, entry| {
-        let entry = entry.trim();
-
-        let (start, end) = match entry.split_once('-') {
-            Some((start, end)) => (
-                start.trim().parse::<usize>().ok()?,
-                end.trim().parse::<usize>().ok()?,
-            ),
-            None => {
-                let cpu = entry.parse::<usize>().ok()?;
-                (cpu, cpu)
-            }
-        };
-
-        let range_size = end.checked_sub(start)?.checked_add(1)?;
-        total.checked_add(range_size)
-    })
+    }
 }
 
 #[cfg(test)]

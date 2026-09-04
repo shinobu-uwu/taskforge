@@ -7,12 +7,12 @@ pub struct CpuUsage {
     pub cpus: Vec<f32>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CpuInfo {
-    pub name: String,
-    pub core_count: usize,
-    pub sockets: usize,
-    pub base_frequency: Frequency,
-    pub caches: Vec<usize>,
-    pub virtualization_enabled: bool,
+    pub name: Option<String>,
+    pub core_count: Option<usize>,
+    pub socket_count: Option<usize>,
+    pub base_frequency: Option<Frequency>,
+    pub caches: Option<Vec<usize>>,
+    pub virtualization_enabled: Option<bool>,
 }

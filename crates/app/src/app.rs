@@ -5,7 +5,7 @@ use iced::{
     theme::palette,
     widget::{column, container, row, space, stack, text},
 };
-use system::{memory::Memory, monitor::SystemMonitor, snapshot::SystemSnapshot};
+use system::{cpu::CpuInfo, memory::Memory, monitor::SystemMonitor, snapshot::SystemSnapshot};
 use tracing::error;
 
 use crate::{
@@ -39,6 +39,9 @@ pub struct App {
     fps: u32,
     frame_count: u32,
     last_fps_update: Instant,
+    cpu_info: CpuInfo,
+    startup_time: Instant,
+    first_frame_time: Option<Instant>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -64,7 +67,7 @@ pub enum Message {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(startup_time: Instant) -> Self {
         let monitor = SystemMonitor::default();
         let snapshot = monitor.snapshot();
         let config = confy::load("taskforge", None).unwrap_or_else(|e| {
@@ -73,6 +76,7 @@ impl App {
         });
         let expanded_sidebar = config.expanded_sidebar;
         let show_fps = std::env::var_os("TASKFORGE_SHOW_FPS").is_some_and(|v| v == "1");
+        let cpu_info = monitor.cpu_info();
 
         Self {
             monitor: Some(Box::new(monitor)),
@@ -90,6 +94,9 @@ impl App {
             fps: 0,
             frame_count: 0,
             last_fps_update: Instant::now(),
+            cpu_info,
+            startup_time,
+            first_frame_time: None,
         }
     }
 
@@ -161,6 +168,11 @@ impl App {
                 self.snapshot = snapshot;
             }
             Message::Frame(now) => {
+                if self.first_frame_time.is_none() {
+                    dbg!(now.duration_since(self.startup_time).as_millis());
+                    self.first_frame_time = Some(now)
+                }
+
                 self.frame_count += 1;
 
                 if now.duration_since(self.last_fps_update).as_secs_f32() >= 1.0 {
@@ -187,6 +199,7 @@ impl App {
                 .charts
                 .view(
                     &self.snapshot,
+                    &self.cpu_info,
                     &self.cpu_history,
                     &self.memory_history,
                     &self.disks_history,

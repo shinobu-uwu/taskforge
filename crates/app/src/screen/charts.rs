@@ -2,14 +2,14 @@ use iced::{
     Color, Element, Fill,
     Length::Shrink,
     Theme, border,
-    widget::{button, column, container, row, rule, scrollable, space, text},
+    widget::{Text, button, column, container, row, rule, scrollable, space, text},
 };
 
 use crate::{
     state::history::{DiskHistory, History, TimedSample},
     widgets::chart::{ChartSettings, cpu_chart, disk_chart, memory_chart},
 };
-use system::{memory::Memory, snapshot::SystemSnapshot};
+use system::{cpu::CpuInfo, memory::Memory, snapshot::SystemSnapshot};
 
 #[derive(Debug, Default)]
 pub struct ChartsScreen {
@@ -68,6 +68,7 @@ impl ChartsScreen {
     pub fn view<'a>(
         &'a self,
         snapshot: &SystemSnapshot,
+        cpu_info: &CpuInfo,
         cpu_history: &'a History<TimedSample<f32>>,
         memory_history: &'a History<TimedSample<Memory>>,
         disks_history: &'a [DiskHistory],
@@ -103,7 +104,7 @@ impl ChartsScreen {
 
         row![
             scrollable(charts.spacing(8).width(240).height(Fill)).spacing(8),
-            self.cpu_content(snapshot, cpu_history, theme)
+            self.cpu_content(snapshot, cpu_info, cpu_history, theme)
         ]
         .padding(16)
         .width(Fill)
@@ -143,6 +144,7 @@ impl ChartsScreen {
     fn cpu_content<'a>(
         &'a self,
         snapshot: &SystemSnapshot,
+        cpu_info: &CpuInfo,
         history: &'a History<TimedSample<f32>>,
         theme: &Theme,
     ) -> Element<'a, Message> {
@@ -196,26 +198,22 @@ impl ChartsScreen {
                 text("Cores").style(text::secondary),
                 text("Logical processors").style(text::secondary),
                 text("Virtualization").style(text::secondary),
-                text("L1 cache").style(text::secondary),
-                text("L2 cache").style(text::secondary),
-                text("L3 cache").style(text::secondary),
             ]
             .spacing(4),
             column![
-                text("3.60 GHz"),
-                text("1"),
-                text(match snapshot.core_count {
-                    Some(c) => c.to_string(),
-                    None => "Unknown".to_string(),
-                }),
-                text(match snapshot.logical_processor_count {
-                    Some(c) => c.to_string(),
-                    None => "Unknown".to_string(),
-                }),
-                text("Enabled"),
-                text("640 KB"),
-                text("10.0 MB"),
-                text("32.0 MB"),
+                self.optional_text(
+                    cpu_info
+                        .base_frequency
+                        .map(|f| format!("{:.2}GHz", f.ghz_f64()))
+                ),
+                self.optional_text(cpu_info.socket_count),
+                self.optional_text(cpu_info.core_count),
+                self.optional_text(snapshot.logical_processor_count),
+                self.optional_text(cpu_info.virtualization_enabled.map(|e| if e {
+                    "Enabled"
+                } else {
+                    "Disabled"
+                })),
             ]
             .spacing(4),
         ]
@@ -244,6 +242,13 @@ impl ChartsScreen {
         column![text(label).style(text::secondary), text(content).size(20),]
             .spacing(4)
             .into()
+    }
+
+    fn optional_text<'a>(&'a self, content: Option<impl text::IntoFragment<'a>>) -> Text<'a> {
+        match content {
+            Some(c) => text(c),
+            None => text("Unknown"),
+        }
     }
 
     const fn preview_chart_settings(&self) -> ChartSettings {

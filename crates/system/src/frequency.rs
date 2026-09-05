@@ -25,6 +25,12 @@ impl Frequency {
     }
 }
 
+impl From<u64> for Frequency {
+    fn from(value: u64) -> Self {
+        Self::from_mhz(value)
+    }
+}
+
 impl Display for Frequency {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

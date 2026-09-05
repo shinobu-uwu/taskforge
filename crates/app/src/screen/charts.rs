@@ -1,8 +1,8 @@
 use iced::{
-    Color, Element, Fill,
+    Color, Element, Fill, Font,
     Length::Shrink,
     Theme, border,
-    widget::{Text, button, column, container, row, rule, scrollable, space, text},
+    widget::{Text, button, column, container, row, rule, scrollable, text},
 };
 
 use crate::{
@@ -68,7 +68,7 @@ impl ChartsScreen {
     pub fn view<'a>(
         &'a self,
         snapshot: &SystemSnapshot,
-        cpu_info: &CpuInfo,
+        cpu_info: &'a CpuInfo,
         cpu_history: &'a History<TimedSample<f32>>,
         memory_history: &'a History<TimedSample<Memory>>,
         disks_history: &'a [DiskHistory],
@@ -144,7 +144,7 @@ impl ChartsScreen {
     fn cpu_content<'a>(
         &'a self,
         snapshot: &SystemSnapshot,
-        cpu_info: &CpuInfo,
+        cpu_info: &'a CpuInfo,
         history: &'a History<TimedSample<f32>>,
         theme: &Theme,
     ) -> Element<'a, Message> {
@@ -153,80 +153,88 @@ impl ChartsScreen {
         let hours = (secs % (24 * 60 * 60)) / (60 * 60);
         let minutes = (secs % (60 * 60)) / 60;
         let seconds = secs % 60;
-
-        let summary = column![
+        let system_details = column![
             row![
-                self.content_field("Usage", format!("{:.0}%", snapshot.cpu_usage.total)),
-                space::horizontal(),
-                self.content_field(
-                    "Frequency",
-                    format!("{:.2} GHz", snapshot.cpu_usage.frequency as f64 / 1000.0)
-                ),
-            ],
-            rule::horizontal(1),
-            row![
-                self.content_field("Processes", snapshot.processes.len()),
-                self.content_field(
-                    "Threads",
-                    match snapshot.thread_count {
+                column![
+                    self.label("Usage"),
+                    self.label("Speed"),
+                    self.label("Processes"),
+                    self.label("Threads"),
+                    self.label("Handles"),
+                ]
+                .spacing(4)
+                .width(160),
+                column![
+                    self.value(format!("{:.0}%", snapshot.cpu_usage.total)),
+                    self.value(format!("{:.2}GHz", snapshot.cpu_usage.frequency.ghz_f64())),
+                    self.value(snapshot.processes.len()),
+                    self.value(match snapshot.thread_count {
                         Some(t) => t.to_string(),
                         None => "Unknown".to_string(),
-                    }
-                ),
-                self.content_field(
-                    "Handles",
-                    match snapshot.handle_count {
-                        Some(d) => d.to_string(),
+                    }),
+                    self.value(match snapshot.handle_count {
+                        Some(h) => h.to_string(),
                         None => "Unknown".to_string(),
-                    }
-                )
+                    }),
+                ]
+                .spacing(4),
             ]
-            .spacing(8),
+            .spacing(16),
             rule::horizontal(1),
-            self.content_field(
-                "Uptime",
-                format!("{}d {}:{:02}:{:02}", days, hours, minutes, seconds)
-            )
-        ]
-        .padding(8)
-        .spacing(8);
-
-        let details = row![
-            column![
-                text("Base speed").style(text::secondary),
-                text("Sockets").style(text::secondary),
-                text("Cores").style(text::secondary),
-                text("Logical processors").style(text::secondary),
-                text("Virtualization").style(text::secondary),
+            row![
+                column![
+                    self.label("Base speed"),
+                    self.label("Sockets"),
+                    self.label("Logical processors"),
+                    self.label("Virtualization"),
+                ]
+                .spacing(4)
+                .width(160),
+                column![
+                    self.value(format!(
+                        "{:.2}GHz",
+                        match cpu_info.base_frequency {
+                            Some(f) => format!("{:.2}GHz", f.ghz_f64()),
+                            None => "Uknown".to_string(),
+                        }
+                    )),
+                    self.value(match cpu_info.socket_count {
+                        Some(s) => s.to_string(),
+                        None => "Unknown".to_string(),
+                    }),
+                    self.value(match snapshot.logical_processor_count {
+                        Some(n) => n.to_string(),
+                        None => "Unknown".to_string(),
+                    }),
+                    self.value(match cpu_info.virtualization_enabled {
+                        Some(v) =>
+                            if v {
+                                "Enabled".to_string()
+                            } else {
+                                "Disabled".to_string()
+                            },
+                        None => "Unknown".to_string(),
+                    }),
+                ]
+                .spacing(4),
             ]
-            .spacing(4),
-            column![
-                self.optional_text(
-                    cpu_info
-                        .base_frequency
-                        .map(|f| format!("{:.2}GHz", f.ghz_f64()))
-                ),
-                self.optional_text(cpu_info.socket_count),
-                self.optional_text(cpu_info.core_count),
-                self.optional_text(snapshot.logical_processor_count),
-                self.optional_text(cpu_info.virtualization_enabled.map(|e| if e {
-                    "Enabled"
-                } else {
-                    "Disabled"
-                })),
-            ]
-            .spacing(4),
+            .spacing(16),
         ]
-        .spacing(24)
-        .padding(8);
-
-        let system_details = row![summary, rule::vertical(1), details]
-            .width(Shrink)
-            .height(Shrink);
+        .spacing(8)
+        .width(Shrink);
 
         column![
-            cpu_chart(history, theme, ChartSettings::detailed()),
-            container(system_details).center_x(Fill),
+            text(cpu_info.name.as_deref().unwrap_or("Unknown"))
+                .size(24)
+                .font(Font {
+                    weight: iced::font::Weight::Semibold,
+                    ..Default::default()
+                }),
+            row![
+                cpu_chart(history, theme, ChartSettings::detailed()),
+                container(system_details),
+            ]
+            .spacing(4),
         ]
         .padding(16)
         .width(Fill)
@@ -234,21 +242,12 @@ impl ChartsScreen {
         .into()
     }
 
-    fn content_field<'a>(
-        &'a self,
-        label: impl text::IntoFragment<'a>,
-        content: impl text::IntoFragment<'a>,
-    ) -> Element<'a, Message> {
-        column![text(label).style(text::secondary), text(content).size(20),]
-            .spacing(4)
-            .into()
+    fn label<'a>(&'a self, label: impl text::IntoFragment<'a>) -> Text<'a> {
+        text(label).style(text::secondary).size(16)
     }
 
-    fn optional_text<'a>(&'a self, content: Option<impl text::IntoFragment<'a>>) -> Text<'a> {
-        match content {
-            Some(c) => text(c),
-            None => text("Unknown"),
-        }
+    fn value<'a>(&'a self, value: impl text::IntoFragment<'a>) -> Text<'a> {
+        text(value).size(16)
     }
 
     const fn preview_chart_settings(&self) -> ChartSettings {

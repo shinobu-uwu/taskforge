@@ -75,7 +75,8 @@ impl SystemMonitor {
                     .cpus()
                     .first()
                     .expect("No CPU core to collect frequency from")
-                    .frequency(),
+                    .frequency()
+                    .into(),
             },
             memory_usage: Memory::from_bytes(self.system.used_memory()),
             total_memory: Memory::from_bytes(self.system.total_memory()),

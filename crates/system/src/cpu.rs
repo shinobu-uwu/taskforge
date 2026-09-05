@@ -3,7 +3,7 @@ use crate::frequency::Frequency;
 #[derive(Debug, Clone)]
 pub struct CpuUsage {
     pub total: f32,
-    pub frequency: u64,
+    pub frequency: Frequency,
     pub cpus: Vec<f32>,
 }
 

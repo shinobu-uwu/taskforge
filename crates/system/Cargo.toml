@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-circular-buffer.workspace = true
 sysinfo.workspace = true
-thiserror.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = ["Win32_System_SystemInformation", "Win32_System_ProcessStatus", "Win32_System_Power"] }

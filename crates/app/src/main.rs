@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{ffi::CString, time::Instant};
 
 use iced::{
     Size,

@@ -2,7 +2,10 @@ use std::collections::HashSet;
 
 use sysinfo::System;
 
-use crate::{cpu::CpuInfo, frequency::Frequency};
+use crate::{
+    cpu::{Cache, CpuInfo},
+    frequency::Frequency,
+};
 
 const ONLINE_CPUS_PATH: &str = "/sys/devices/system/cpu/online";
 
@@ -36,6 +39,7 @@ impl super::Backend for LinuxBackend {
         let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") else {
             return CpuInfo::default();
         };
+
         self.parse_cpuinfo(&cpuinfo)
     }
 
@@ -56,13 +60,14 @@ impl LinuxBackend {
         let socket_count = self.parse_socket_count(cpuinfo);
         let base_frequency = self.base_frequency();
         let virtualization_enabled = self.virtualization_enabled();
+        let caches = self.caches();
 
         CpuInfo {
             name,
             core_count,
             socket_count,
             base_frequency,
-            caches: None,
+            caches,
             virtualization_enabled,
         }
     }
@@ -99,6 +104,33 @@ impl LinuxBackend {
                 .parse()
                 .ok()?;
         Some(Frequency::from_mhz(base_frequency))
+    }
+
+    fn caches(&self) -> Option<Vec<Cache>> {
+        Some(
+            std::fs::read_dir("/sys/devices/system/cpu/cpu0/cache")
+                .ok()?
+                .flatten()
+                .filter_map(|e| {
+                    let level = std::fs::read_to_string(e.path().join("level"))
+                        .ok()?
+                        .trim()
+                        .parse()
+                        .ok()?;
+                    let size: usize = std::fs::read_to_string(e.path().join("size"))
+                        .ok()?
+                        .trim()
+                        .trim_end_matches('K')
+                        .parse()
+                        .ok()?;
+
+                    Some(Cache {
+                        level,
+                        size: size * 1024,
+                    })
+                })
+                .collect(),
+        )
     }
 
     fn virtualization_enabled(&self) -> Option<bool> {

@@ -188,16 +188,20 @@ impl ChartsScreen {
                     self.label("Logical processors"),
                     self.label("Virtualization"),
                 ]
+                .extend(
+                    cpu_info
+                        .caches
+                        .iter()
+                        .flatten()
+                        .map(|c| self.label(format!("L{} cache", c.level)).into())
+                )
                 .spacing(4)
                 .width(160),
                 column![
-                    self.value(format!(
-                        "{:.2}GHz",
-                        match cpu_info.base_frequency {
-                            Some(f) => format!("{:.2}GHz", f.ghz_f64()),
-                            None => "Uknown".to_string(),
-                        }
-                    )),
+                    self.value(match cpu_info.base_frequency {
+                        Some(f) => format!("{:.2}GHz", f.ghz_f64()),
+                        None => "Uknown".to_string(),
+                    }),
                     self.value(match cpu_info.socket_count {
                         Some(s) => s.to_string(),
                         None => "Unknown".to_string(),
@@ -216,9 +220,25 @@ impl ChartsScreen {
                         None => "Unknown".to_string(),
                     }),
                 ]
+                .extend(
+                    cpu_info
+                        .caches
+                        .iter()
+                        .flatten()
+                        .map(|c| self.value(format!("{}KiB", c.size / 1024)).into())
+                )
                 .spacing(4),
             ]
             .spacing(16),
+            rule::horizontal(1),
+            column![
+                text("Uptime").style(text::secondary).size(16),
+                self.value(format!(
+                    "{}d {:02}:{:02}:{:02}",
+                    days, hours, minutes, seconds
+                ))
+            ]
+            .spacing(4)
         ]
         .spacing(8)
         .width(Shrink);

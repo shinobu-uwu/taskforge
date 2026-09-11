@@ -13,6 +13,12 @@ pub struct CpuInfo {
     pub core_count: Option<usize>,
     pub socket_count: Option<usize>,
     pub base_frequency: Option<Frequency>,
-    pub caches: Option<Vec<usize>>,
+    pub caches: Option<Vec<Cache>>,
     pub virtualization_enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Cache {
+    pub level: usize,
+    pub size: usize,
 }

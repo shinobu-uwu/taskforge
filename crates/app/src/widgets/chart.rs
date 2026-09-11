@@ -17,7 +17,6 @@ pub struct ChartSettings {
     pub y_mesh: bool,
     pub margin: u32,
     pub x_label_area_size: u32,
-    pub y_label_area_size: u32,
     pub x_labels: usize,
     pub y_labels: usize,
     pub series_width: u32,
@@ -37,7 +36,6 @@ impl ChartSettings {
             y_mesh: true,
             margin: 12,
             x_label_area_size: 0,
-            y_label_area_size: 0,
             x_labels: 0,
             y_labels: 0,
             series_width: 2,
@@ -55,7 +53,6 @@ impl ChartSettings {
             y_mesh: true,
             margin: 12,
             x_label_area_size: 32,
-            y_label_area_size: 48,
             x_labels: 8,
             y_labels: 5,
             ..Self::compact()
@@ -179,8 +176,9 @@ impl<Message> Chart<Message> for CpuChart<'_> {
         let Ok(mut chart) = builder
             .margin(self.settings.margin)
             .x_label_area_size(self.settings.x_label_area_size)
-            .y_label_area_size(self.settings.y_label_area_size)
+            .top_x_label_area_size(self.settings.x_label_area_size)
             .build_cartesian_2d(-HISTORY_WINDOW_SECONDS..0.0_f32, 0.0_f32..100.0_f32)
+            .map(|chart| chart.set_secondary_coord(0.0_f32..100.0_f32, 0.0_f32..100.0_f32))
         else {
             return;
         };
@@ -190,11 +188,23 @@ impl<Message> Chart<Message> for CpuChart<'_> {
         let _ = mesh
             .label_style((FontFamily::SansSerif, 16, &self.colors.grid))
             .x_label_formatter(&format_seconds)
-            .y_label_formatter(&format_percent)
             .axis_style(self.colors.grid.mix(0.0))
             .light_line_style(self.colors.grid.mix(self.settings.light_grid_opacity))
             .bold_line_style(self.colors.grid.mix(self.settings.bold_grid_opacity))
             .draw();
+
+        if self.settings.axes {
+            let mut top_axis = chart.configure_secondary_axes();
+            let _ = top_axis
+                .x_labels(self.settings.y_labels)
+                .y_labels(0)
+                .x_label_offset(-16)
+                .label_style((FontFamily::SansSerif, 16, &self.colors.grid))
+                .x_label_formatter(&format_percent)
+                .axis_style(self.colors.grid.mix(0.0))
+                .set_all_tick_mark_size(2)
+                .draw();
+        }
 
         let points = chart_samples(self.history)
             .into_iter()
@@ -225,7 +235,6 @@ impl<Message> Chart<Message> for MemoryChart<'_> {
         let Ok(mut chart) = builder
             .margin(self.settings.margin)
             .x_label_area_size(self.settings.x_label_area_size)
-            .y_label_area_size(self.settings.y_label_area_size)
             .build_cartesian_2d(
                 -HISTORY_WINDOW_SECONDS..0.0_f32,
                 0.0_f64..self.total_memory.as_gib_f64(),
@@ -279,7 +288,6 @@ impl<Message> Chart<Message> for DiskChart<'_> {
         let Ok(mut chart) = builder
             .margin(self.settings.margin)
             .x_label_area_size(self.settings.x_label_area_size)
-            .y_label_area_size(self.settings.y_label_area_size)
             .build_cartesian_2d(-HISTORY_WINDOW_SECONDS..0.0_f32, 0.0_f64..upper_bound)
         else {
             return;
@@ -349,11 +357,19 @@ fn chart_samples<T>(history: &History<TimedSample<T>>) -> Vec<(f32, &TimedSample
 }
 
 fn format_seconds(seconds: &f32) -> String {
-    format!("{:.0}s", seconds.abs())
+    if (*seconds + HISTORY_WINDOW_SECONDS).abs() < f32::EPSILON {
+        format!("{HISTORY_WINDOW_SECONDS:.0}s")
+    } else {
+        String::new()
+    }
 }
 
 fn format_percent(percent: &f32) -> String {
-    format!("{percent:.0}%")
+    if (*percent - 100.0).abs() < f32::EPSILON {
+        "100%".to_owned()
+    } else {
+        String::new()
+    }
 }
 
 fn configure_mesh<DB, X, Y>(mesh: &mut MeshStyle<'_, '_, X, Y, DB>, settings: ChartSettings)
@@ -393,7 +409,7 @@ mod tests {
 
     use super::{
         ChartColors, ChartSettings, CpuChart, DiskChart, DiskChartColors, MemoryChart,
-        chart_samples, format_seconds,
+        chart_samples, format_percent, format_seconds,
     };
     use crate::state::history::{History, TimedSample};
 
@@ -498,7 +514,11 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(startup_points, [(-30.0, 1.0), (0.0, 2.0)]);
-        assert_eq!(format_seconds(&-30.0), "30s");
-        assert_eq!(format_seconds(&0.0), "0s");
+        assert_eq!(format_seconds(&-60.0), "60s");
+        assert_eq!(format_seconds(&-30.0), "");
+        assert_eq!(format_seconds(&0.0), "");
+        assert_eq!(format_percent(&100.0), "100%");
+        assert_eq!(format_percent(&50.0), "");
+        assert_eq!(format_percent(&0.0), "");
     }
 }

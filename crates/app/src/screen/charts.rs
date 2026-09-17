@@ -102,9 +102,32 @@ impl ChartsScreen {
             ));
         }
 
+        let content = match &self.selected_chart {
+            Chart::Cpu => self.cpu_content(snapshot, cpu_info, cpu_history, theme),
+            Chart::Memory => {
+                self.memory_content(snapshot.memory_usage, total_memory, memory_history, theme)
+            }
+            Chart::Disk(name) => match disks_history.iter().find(|disk| &disk.name == name) {
+                Some(disk) => self.disk_content(disk, theme),
+                None => container(
+                    column![
+                        self.title(name.clone()),
+                        text("Disk data is no longer available.").style(text::secondary),
+                    ]
+                    .spacing(12),
+                )
+                .padding(16)
+                .width(Fill)
+                .height(Fill)
+                .into(),
+            },
+        };
+
         row![
-            scrollable(charts.spacing(8).width(240).height(Fill)).spacing(8),
-            self.cpu_content(snapshot, cpu_info, cpu_history, theme)
+            scrollable(charts.spacing(8).width(240))
+                .height(Fill)
+                .spacing(8),
+            content
         ]
         .padding(16)
         .width(Fill)
@@ -200,7 +223,7 @@ impl ChartsScreen {
                 column![
                     self.value(match cpu_info.base_frequency {
                         Some(f) => format!("{:.2}GHz", f.ghz_f64()),
-                        None => "Uknown".to_string(),
+                        None => "Unknown".to_string(),
                     }),
                     self.value(match cpu_info.socket_count {
                         Some(s) => s.to_string(),
@@ -243,23 +266,113 @@ impl ChartsScreen {
         .spacing(8)
         .width(Shrink);
 
-        column![
-            text(cpu_info.name.as_deref().unwrap_or("Unknown"))
-                .size(24)
-                .font(Font {
-                    weight: iced::font::Weight::Semibold,
-                    ..Default::default()
-                }),
-            row![
-                cpu_chart(history, theme, ChartSettings::detailed()),
-                container(system_details),
-            ]
-            .spacing(4),
+        self.chart_content(
+            cpu_info.name.as_deref().unwrap_or("Unknown"),
+            cpu_chart(history, theme, ChartSettings::detailed()),
+            system_details.into(),
+        )
+    }
+
+    fn memory_content<'a>(
+        &'a self,
+        used: Memory,
+        total: Memory,
+        history: &'a History<TimedSample<Memory>>,
+        theme: &Theme,
+    ) -> Element<'a, Message> {
+        let details = column![
+            self.detail("Used", format!("{:.2} GiB", used.as_gib_f64())),
+            self.detail("Available", "—"),
+            self.detail("Total", format!("{:.2} GiB", total.as_gib_f64())),
+            rule::horizontal(1),
+            self.detail("Cached", "—"),
+            self.detail("Buffers", "—"),
+            self.detail("Swap used", "—"),
+            self.detail("Swap total", "—"),
+            rule::horizontal(1),
+            self.detail("Memory speed", "—"),
+            self.detail("Slots used", "—"),
         ]
+        .spacing(8);
+
+        self.chart_content(
+            "Memory",
+            memory_chart(history, total, theme, ChartSettings::detailed()),
+            details.into(),
+        )
+    }
+
+    fn disk_content<'a>(&'a self, disk: &'a DiskHistory, theme: &Theme) -> Element<'a, Message> {
+        // These fields intentionally remain placeholders until collection is implemented.
+        // Disk history currently contains bytes per sample, not transfer rates.
+        let details = column![
+            self.detail("Read speed", "—"),
+            self.detail("Write speed", "—"),
+            self.detail("Active time", "—"),
+            self.detail("Average response time", "—"),
+            rule::horizontal(1),
+            self.detail("Capacity", "—"),
+            self.detail("Model", "—"),
+            self.detail("Device path", "—"),
+            self.detail("Type (SSD/HDD)", "—"),
+        ]
+        .spacing(8);
+        let graph = column![
+            disk_chart(&disk.usage, theme, ChartSettings::detailed()),
+            row![
+                text("Read").color(theme.palette().primary),
+                text("Write").color(theme.palette().warning),
+                text("Bytes per sample").style(text::secondary),
+            ]
+            .spacing(16),
+        ]
+        .spacing(8)
+        .width(Fill)
+        .height(Fill);
+
+        self.chart_content(&disk.name, graph.into(), details.into())
+    }
+
+    fn chart_content<'a>(
+        &'a self,
+        title: impl text::IntoFragment<'a>,
+        chart: Element<'a, Message>,
+        details: Element<'a, Message>,
+    ) -> Element<'a, Message> {
+        column![
+            self.title(title),
+            row![
+                container(chart).width(Fill).height(Fill),
+                scrollable(container(details).width(280))
+                    .height(Fill)
+                    .spacing(8),
+            ]
+            .spacing(16)
+            .height(Fill),
+        ]
+        .spacing(16)
         .padding(16)
         .width(Fill)
         .height(Fill)
         .into()
+    }
+
+    fn title<'a>(&self, title: impl text::IntoFragment<'a>) -> Text<'a> {
+        text(title).size(24).font(Font {
+            weight: iced::font::Weight::Semibold,
+            ..Default::default()
+        })
+    }
+
+    fn detail<'a>(
+        &'a self,
+        label: &'static str,
+        value: impl text::IntoFragment<'a>,
+    ) -> Element<'a, Message> {
+        row![self.label(label).width(160), self.value(value).width(Fill)]
+            .spacing(16)
+            .width(Fill)
+            .into()
     }
 
     fn label<'a>(&'a self, label: impl text::IntoFragment<'a>) -> Text<'a> {

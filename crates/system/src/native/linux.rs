@@ -3,8 +3,12 @@ use std::collections::HashSet;
 use sysinfo::System;
 
 use crate::{
-    cpu::{Cache, CpuInfo},
+    cpu::{
+        CpuInfo,
+        cache::{Cache, Level},
+    },
     frequency::Frequency,
+    memory::Memory,
 };
 
 const ONLINE_CPUS_PATH: &str = "/sys/devices/system/cpu/online";
@@ -107,29 +111,65 @@ impl LinuxBackend {
     }
 
     fn caches(&self) -> Option<Vec<Cache>> {
-        Some(
-            std::fs::read_dir("/sys/devices/system/cpu/cpu0/cache")
-                .ok()?
-                .flatten()
-                .filter_map(|e| {
-                    let level = std::fs::read_to_string(e.path().join("level"))
-                        .ok()?
-                        .trim()
-                        .parse()
-                        .ok()?;
-                    let size: usize = std::fs::read_to_string(e.path().join("size"))
-                        .ok()?
-                        .trim()
-                        .trim_end_matches('K')
-                        .parse()
-                        .ok()?;
-
-                    Some(Cache {
-                        level,
-                        size: size * 1024,
+        let caches: HashSet<(Level, Memory, String)> = std::fs::read_dir("/sys/devices/system/cpu")
+            .ok()?
+            .filter_map(Result::ok)
+            .filter_map(|entry| {
+                let name = entry.file_name();
+                if name.to_str()?.strip_prefix("cpu")?.parse::<u32>().is_ok() {
+                    Some(entry.path())
+                } else {
+                    None
+                }
+            })
+            .flat_map(|e| {
+                std::fs::read_dir(e.join("cache"))
+                    .ok()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Result::ok)
+                    .filter(|d| {
+                        d.file_name()
+                            .to_str()
+                            .and_then(|s| s.strip_prefix("index"))
+                            .is_some_and(|s| s.parse::<u32>().is_ok())
                     })
-                })
-                .collect(),
+                    .map(|d| d.path())
+            })
+            .filter_map(|e| {
+                let level = std::fs::read_to_string(e.join("level"))
+                    .ok()?
+                    .trim_end()
+                    .parse()
+                    .ok()?;
+                let size: u64 = std::fs::read_to_string(e.join("size"))
+                    .ok()?
+                    .trim_end()
+                    .trim_end_matches('K')
+                    .parse()
+                    .ok()?;
+                let shared_cpus = std::fs::read_to_string(e.join("shared_cpu_list")).ok()?;
+
+                Some((
+                    Level::new(level),
+                    Memory::from_bytes(size * 1024),
+                    shared_cpus.trim_end().to_owned(),
+                ))
+            })
+            .collect();
+
+        Some(
+            caches
+                .into_iter()
+                .fold(Vec::new(), |mut caches, (level, size, _)| {
+                    if let Some(cache) = caches.iter_mut().find(|c| c.level == level) {
+                        cache.size += size;
+                    } else {
+                        caches.push(Cache { level, size });
+                    }
+
+                    caches
+                }),
         )
     }
 

@@ -248,7 +248,7 @@ impl ChartsScreen {
                         .caches
                         .iter()
                         .flatten()
-                        .map(|c| self.value(format!("{}KiB", c.size / 1024)).into())
+                        .map(|c| self.value(c.size.to_string()).into())
                 )
                 .spacing(4),
             ]

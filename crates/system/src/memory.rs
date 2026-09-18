@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 const BYTES_PER_KIBIBYTE: f64 = 1024.0;
 const BYTES_PER_MEBIBYTE: f64 = BYTES_PER_KIBIBYTE * 1024.0;
 const BYTES_PER_GIBIBYTE: f64 = BYTES_PER_MEBIBYTE * 1024.0;
@@ -29,6 +31,27 @@ impl Memory {
     }
 }
 
+impl Display for Memory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        const UNITS: [&str; 7] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+
+        let mut divisor = 1_u64;
+        let mut unit = 0;
+        while unit + 1 < UNITS.len() && self.0 / divisor >= 1024 {
+            divisor *= 1024;
+            unit += 1;
+        }
+
+        write!(f, "{}{}", self.0 as f64 / divisor as f64, UNITS[unit])
+    }
+}
+
+impl std::ops::AddAssign for Memory {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Memory;
@@ -41,5 +64,24 @@ mod tests {
         assert_eq!(memory.as_kib_f64(), 3.0 * 1024.0 * 1024.0);
         assert_eq!(memory.as_mib_f64(), 3.0 * 1024.0);
         assert_eq!(memory.as_gib_f64(), 3.0);
+    }
+
+    #[test]
+    fn displays_binary_units() {
+        for (bytes, expected) in [
+            (0, "0B"),
+            (1, "1B"),
+            (1023, "1023B"),
+            (1024, "1KiB"),
+            (16 * 1024, "16KiB"),
+            (1024 * 1024, "1MiB"),
+            (4096 * 1024, "4MiB"),
+            (3 * 1024_u64.pow(3) / 2, "1.5GiB"),
+            (1024_u64.pow(4), "1TiB"),
+            (1024_u64.pow(5), "1PiB"),
+            (1024_u64.pow(6), "1EiB"),
+        ] {
+            assert_eq!(Memory::from_bytes(bytes).to_string(), expected);
+        }
     }
 }

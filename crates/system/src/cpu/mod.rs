@@ -1,4 +1,6 @@
-use crate::frequency::Frequency;
+pub mod cache;
+
+use crate::{cpu::cache::Cache, frequency::Frequency};
 
 #[derive(Debug, Clone)]
 pub struct CpuUsage {
@@ -15,10 +17,4 @@ pub struct CpuInfo {
     pub base_frequency: Option<Frequency>,
     pub caches: Option<Vec<Cache>>,
     pub virtualization_enabled: Option<bool>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct Cache {
-    pub level: usize,
-    pub size: usize,
 }
